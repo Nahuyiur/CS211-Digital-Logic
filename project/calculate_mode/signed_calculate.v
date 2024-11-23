@@ -13,8 +13,8 @@ module signed_calculate(
 
     always @(*) begin
         case(op)
-            2'01: result=a+b;
-            2'10: result=a-b;
+            2'b01: result=a+b;
+            2'b10: result=a-b;
             default: result=9'b0_0000_0000;
         endcase
 
