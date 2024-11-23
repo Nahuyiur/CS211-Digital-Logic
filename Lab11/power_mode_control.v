@@ -22,8 +22,8 @@ module power_mode_control (
     localparam LONG_PRESS_TIME  = 3;             
     localparam LONG_PRESS_COUNT = CLK_FREQ * LONG_PRESS_TIME; 
 
-    reg [28:0] press_counter;      // 按钮按下计时器
-    reg button_prev, button_stable;  // 按钮的前一个状态，按钮稳定状态
+    reg [28:0] press_counter;      
+    reg button_prev, button_stable;  
     wire button_pressed;            // 按钮按下脉冲信号
     wire button_released;           // 按钮释放脉冲信号
 
