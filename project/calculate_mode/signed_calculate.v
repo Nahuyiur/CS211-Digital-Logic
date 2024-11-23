@@ -1,7 +1,7 @@
 module signed_calculate(
     input [7:0] a,           // 输入的有符号补码数 a
     input [7:0] b,           // 输入的有符号补码数 b
-    input op,                // 选择计算模式
+    input [1:0] op,                // 选择计算模式
     output reg [6:0] seg1,   // 数码管显示的百位（符号位）
     output reg [6:0] seg2,   // 数码管显示的十位
     output reg [6:0] seg3    // 数码管显示的个位
@@ -12,11 +12,11 @@ module signed_calculate(
     reg sign;                //sign是符号位
 
     always @(*) begin
-        if(op==0)begin
-            result=a+b;
-        end else begin
-            result=a-b;
-        end
+        case(op)
+            2'01: result=a+b;
+            2'10: result=a-b;
+            default: result=9'b0_0000_0000;
+        endcase
 
     sign=result[8];
     abs_result = is_negative ? -result[7:0] : result[7:0]; // 计算绝对值
