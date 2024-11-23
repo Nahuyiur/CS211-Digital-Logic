@@ -89,7 +89,7 @@ module power_mode_control (
                 end
             end
 
-            default: next_state = STATE_OFF;  // 默认进入关机状态
+            default: next_state = STATE_OFF;  
         endcase
     end
 
