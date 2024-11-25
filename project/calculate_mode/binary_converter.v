@@ -1,14 +1,13 @@
 module binary_converter (
     input [7:0] binary,       // 输入的 8 位二进制数
-    output [6:0] seg1,        // 八进制百位数码管显示
-    output [6:0] seg2,        // 八进制十位数码管显示
-    output [6:0] seg3,        // 八进制个位数码管显示
-    output [6:0] seg4,        // 十进制百位数码管显示
-    output [6:0] seg5,        // 十进制十位数码管显示
-    output [6:0] seg6,        // 十进制个位数码管显示
-    output [6:0] seg7,        // 十六进制高位数码管显示
-    output [6:0] seg8         // 十六进制低位数码管显示
-    output [7:0] leds,        // 对应的led灯显示
+    output [7:0] seg1,        // 八进制百位数码管显示
+    output [7:0] seg2,        // 八进制十位数码管显示
+    output [7:0] seg3,        // 八进制个位数码管显示
+    output [7:0] seg4,        // 十进制百位数码管显示
+    output [7:0] seg5,        // 十进制十位数码管显示
+    output [7:0] seg6,        // 十进制个位数码管显示
+    output [7:0] seg7,        // 十六进制高位数码管显示
+    output [7:0] seg8      // 十六进制低位数码管显示
 );
 
     // 八进制转换结果寄存器
@@ -80,6 +79,4 @@ module binary_converter (
     assign seg7 = digit_to_seg(hex_high);         // 十六进制高位
     assign seg8 = digit_to_seg(hex_low);          // 十六进制低位
 
-    // LED 输出：直接映射输入的每一位
-    assign leds = binary;
 endmodule

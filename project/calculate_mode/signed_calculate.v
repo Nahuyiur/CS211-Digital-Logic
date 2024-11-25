@@ -1,25 +1,25 @@
 module signed_calculate(
     input [7:0] a,           // 输入的有符号补码数 a
     input [7:0] b,           // 输入的有符号补码数 b
-    input [1:0] op,                // 选择计算模式
-    output reg [6:0] seg1,   // 数码管显示的百位（符号位）
-    output reg [6:0] seg2,   // 数码管显示的十位
-    output reg [6:0] seg3    // 数码管显示的个位
+    input [3:0] op,          // 选择计算模式
+    output reg [7:0] seg1,   // 数码管显示的百位（符号位）
+    output reg [7:0] seg2,   // 数码管显示的十位
+    output reg [7:0] seg3    // 数码管显示的个位
 );
 
-    reg signed [8:0] result;
-    reg [7:0] abs_result;
+    reg signed [7:0] result;
+    reg [6:0] abs_result;
     reg sign;                //sign是符号位
 
     always @(*) begin
         case(op)
-            2'b01: result=a+b;
-            2'b10: result=a-b;
-            default: result=9'b0_0000_0000;
+            4'b0001: result=a+b;
+            4'b0010: result=a-b;
+            default: result=8'b0000_0000;
         endcase
 
-    sign=result[8];
-    abs_result = is_negative ? -result[7:0] : result[7:0]; // 计算绝对值
+    sign=result[7];
+    abs_result = (sign==0) ? -result[7:0] : result[7:0]; // 计算绝对值
     end
 
     // 数码管段码生成逻辑
@@ -55,5 +55,5 @@ module signed_calculate(
         // 第三个数码管：显示个位
         seg3 = digit_to_seg(abs_result % 10);
     end
-    
+
 endmodule
