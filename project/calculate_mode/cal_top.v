@@ -101,6 +101,8 @@ parameter NumD = 8'b0111_1010; // "D"
 parameter NumE = 8'b1001_1110; // "E"
 parameter NumF = 8'b1000_1110; // "F"
 parameter Blank = 8'b0000_0000; // 空白
+parameter Minus= 8'b0000_0010;//"-"
+
 function [7:0] digit_to_seg1;
     input [3:0] digit;  // 输入 4 位数字（支持 0-9 和 A-F）
     begin
@@ -182,11 +184,16 @@ end
 
 
 // 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001，
-parameter Mode1=5'b00001;
-parameter Mode2=5'b00010;
-parameter Mode3=5'b00100;
-parameter Mode4=5'b01000;
-parameter Mode5=5'b10000;
+parameter Mode1=5'b00_001;
+parameter Mode2=5'b00_010;
+parameter Mode3=5'b00_100;
+parameter Mode4=5'b01_000;
+parameter Mode5=5'b10_000;
+
+parameter OP1=4'b00_01;
+parameter OP2=4'b00_10;
+parameter OP3=4'b01_00;
+parameter OP4=4'b10_00;
 
 always @(posedge clk) begin
     if(~mode_entered&&delay_trigger) begin
@@ -208,22 +215,22 @@ always @(posedge clk) begin
     if(mode_entered&&delay_trigger)begin
     if (select) begin
         case (op)
-            4'b0001: begin
-                if(mode==5'b00001) begin//第一个运算类型（进制转换）只有一个操作符，因此直接回到0001
-                op <= 4'b0001;
+            OP1: begin
+                if(mode==Mode1) begin//第一个运算类型（进制转换）只有一个操作符，因此直接回到0001
+                op <= OP1;
             end
                else
-               op<=4'b0010;
+               op <= OP2;
             end
-            4'b0010: begin
-                if(mode==5'b00010) begin//第二个运算类型（符号加减）只有两个操作符，因此直接回到0001
-                op <= 4'b0001;
+            OP2: begin
+                if(mode==Mode2) begin//第二个运算类型（符号加减）只有两个操作符，因此直接回到0001
+                op <= OP1;
             end
                else
-               op<=4'b0100;
+               op<=OP3;
             end
-            4'b0100: op <= 4'b1000;
-            4'b1000: op <= 4'b0001;
+            OP3: op <= OP4;
+            OP4: op <= OP1;
         endcase
     end
     end
@@ -231,30 +238,34 @@ end
 
 // 该模块用于二元运算的操作步骤切换，点击select按钮切换步骤store，切换顺序为：00，01，10，11，00，
 //00清零之前的运算，01提示输入a并时刻显示和存储a,10提示输入b并时刻显示和存储b,11显示最终结果
-//请把store的四个值参数化
+parameter Step1=2'b00;
+parameter Step2=2'b01;
+parameter Step3=2'b10;
+parameter Step4=2'b11;
+
 always @(posedge clk) begin
     if(mode_entered&&delay_trigger)begin
-    if (confirm) begin
-        case (store)
-            2'b00: store <=2'b01;
-            2'b01: begin
-                if(mode==5'b00001)begin
-                store <=2'b11;
-            end
-            else begin
-                store <=2'b10;
-            end
-            end
-            2'b10: store <=2'b11;
-            2'b11: store <=2'b00;
-        endcase
-    end
+        if (confirm) begin
+            case (store)
+                Step1: store <=Step2;
+                Step2: begin
+                    if(mode==Mode1)begin
+                    store <=Step4;
+                end
+                else begin
+                    store <=Step3;
+                end
+                end
+                Step3: store <=Step4;
+                Step4: store <=Step1;
+            endcase
+        end
     end
 end
 
 
 always @(posedge clk) begin//控制leds和seg的输出
-        case(mode_entered)
+    case(mode_entered)
         0: begin
             seg2<=8'b0;
             seg3<=8'b0;
@@ -264,142 +275,142 @@ always @(posedge clk) begin//控制leds和seg的输出
             seg7<=8'b0;
             seg8<=8'b0;
             leds<=8'b0;
-        case (mode)//未进入模式的时候seg1亮起，显示此时的运算类型（1，2，3，4，5）
-                5'b00001: seg1 <= 8'b0110_0000; 
-                5'b00010: seg1 <= 8'b1101_1010; 
-                5'b00100: seg1 <= 8'b1111_0010; 
-                5'b01000: seg1 <= 8'b0110_0110; 
-                5'b10000: seg1 <= 8'b1011_0110; 
-                default: seg1 <= 8'b0000_0000; // 默认值以防未定义操作
-        endcase
-   
+            case (mode)//未进入模式的时候seg1亮起，显示此时的运算类型（1，2，3，4，5）
+                    Mode1: seg1 <= Num1; 
+                    Mode2: seg1 <= Num2; 
+                    Mode3: seg1 <= Num3; 
+                    Mode4: seg1 <= Num4; 
+                    Mode5: seg1 <= Num5; 
+                    default: seg1 <= Blank; // 默认值以防未定义操作
+            endcase
         end
+
         1: begin
-            
-    case(store)
-    2'b00: begin
-        seg3<=8'b0;
-        seg4<=8'b0;
-        seg5<=8'b0;
-        seg6<=8'b0;
-        seg7<=8'b0;
-        seg8<=8'b0;
-         case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
-            endcase
-        case (mode)//同时让seg1不要关闭
-                5'b00001: seg1 <= 8'b0110_0000; 
-                5'b00010: seg1 <= 8'b1101_1010; 
-                5'b00100: seg1 <= 8'b1111_0010; 
-                5'b01000: seg1 <= 8'b0110_0110; 
-                5'b10000: seg1 <= 8'b1011_0110; 
-                default: seg1 <= 8'b0000_0000;
-        endcase
-        seg3 <=8'b0;
-        seg4 <=8'b0;
-        leds <= 8'b0;
-    end
-    2'b01: begin
-         case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
-            endcase
-        case (mode)
-                5'b00001: seg1 <= 8'b0110_0000; 
-                5'b00010: seg1 <= 8'b1101_1010; 
-                5'b00100: seg1 <= 8'b1111_0010; 
-                5'b01000: seg1 <= 8'b0110_0110; 
-                5'b10000: seg1 <= 8'b1011_0110; 
-                default: seg1 <= 8'b0000_0000; // 默认值以防未定义操作
-        endcase
-        seg3 <= 8'b00111010;//这个数码管输出是a，提示输入a
-        seg4 <= 8'b0;//b此时不出现
-        leds <= in;//同步显示a的值
-        a<=in;//存储a
-    end
-    2'b10: begin
-         case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
-            endcase
-        case (mode)
-                5'b00001: seg1 <= 8'b0110_0000; 
-                5'b00010: seg1 <= 8'b1101_1010; 
-                5'b00100: seg1 <= 8'b1111_0010; 
-                5'b01000: seg1 <= 8'b0110_0110; 
-                5'b10000: seg1 <= 8'b1011_0110; 
-                default: seg1 <= 8'b0000_0000; 
-        endcase
-        seg3 <= 8'b00111010;
-        seg4 <= 8'b00111110;//这个数码管输出是b，提示输入a
-        leds <= in;
-        b<=in;
-    end
-    2'b11: begin
-        case (mode) //五种运算类型分别操作
-            5'b00001: begin
-            convert_binary(a,seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8);
-            leds<=8'b0;
+            case(store)
+            Step1: begin
+                seg3<=8'b0;
+                seg4<=8'b0;
+                seg5<=8'b0;
+                seg6<=8'b0;
+                seg7<=8'b0;
+                seg8<=8'b0;
+                case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                endcase
+                case (mode)//同时让seg1不要关闭
+                        Mode1: seg1 <= Num1; 
+                        Mode2: seg1 <= Num2; 
+                        Mode3: seg1 <= Num3; 
+                        Mode4: seg1 <= Num4; 
+                        Mode5: seg1 <= Num5; 
+                        default: seg1 <= Blank;
+                endcase
+                seg3 <=8'b0;
+                seg4 <=8'b0;
+                leds <= 8'b0;
             end
-            5'b00010: begin
+            Step2: begin
                 case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
-            endcase
-            signed_operation(a,b,op,seg5,seg6,seg7,seg8);
-            
-            leds<=8'b0;
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                    endcase
+                case (mode)
+                        Mode1: seg1 <= Num1; 
+                        Mode2: seg1 <= Num2; 
+                        Mode3: seg1 <= Num3; 
+                        Mode4: seg1 <= Num4; 
+                        Mode5: seg1 <= Num5; 
+                        default: seg1 <= Blank; // 默认值以防未定义操作
+                endcase
+                seg3 <= NUmA;//这个数码管输出是a，提示输入a
+                seg4 <= 8'b0;//b此时不出现
+                leds <= in;//同步显示a的值
+                a<=in;//存储a
             end
-            5'b00100: begin
+            Step3: begin
                 case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
-            endcase
-            shift_operation(a,b,op,leds);
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                    endcase
+                case (mode)
+                        Mode1: seg1 <= Num1; 
+                        Mode2: seg1 <= Num2; 
+                        Mode3: seg1 <= Num3; 
+                        Mode4: seg1 <= Num4; 
+                        Mode5: seg1 <= Num5; 
+                        default: seg1 <= Blank; 
+                endcase
+                seg3 <= NUmA;
+                seg4 <= NumB;//这个数码管输出是b，提示输入a
+                leds <= in;
+                b<=in;
             end
-            5'b01000: begin
-                case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; 
+            Step4: begin
+                case (mode) //五种运算类型分别操作
+                    Mode1: begin
+                    convert_binary(a,seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8);
+                    leds<=8'b0;
+                    end
+                    Mode2: begin
+                        case (op)
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                    endcase
+                    signed_operation(a,b,op,seg5,seg6,seg7,seg8);
+                    
+                    leds<=8'b0;
+                    end
+                    Mode3: begin
+                        case (op)
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                    endcase
+                    shift_operation(a,b,op,leds);
+                    end
+                    Mode4: begin
+                        case (op)
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; 
+                    endcase
+                    bitwise_operation(a,b,op,leds);
+                    end
+                    Mode5: begin
+                        case (op)
+                        OP1: seg2 <= Num1; 
+                        OP2: seg2 <= Num2; 
+                        OP3: seg2 <= Num3; 
+                        OP4: seg2 <= Num4; 
+                        default: seg2 <= Blank; // 默认值以防未定义操作
+                    endcase
+                    logic_operation(a,b,op,leds);
+                    end
+                endcase
+                end
             endcase
-            bitwise_operation(a,b,op,leds);
-            end
-            5'b10000: begin
-                case (op)
-                4'b0001: seg2 <= 8'b0110_0000; 
-                4'b0010: seg2 <= 8'b1101_1010; 
-                4'b0100: seg2 <= 8'b1111_0010; 
-                4'b1000: seg2 <= 8'b0110_0110; 
-                default: seg2 <= 8'b0000_0000; // 默认值以防未定义操作
+                end
             endcase
-            logic_operation(a,b,op,leds);
-            end
-        endcase
+            display_scan(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         end
-    endcase
-        end
-    endcase
-    display_scan(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
-end
+
 //下面是六个task，对应五个运算类型和一个数码管显示逻辑s
 task convert_binary;
     input [7:0] bin_value; // 输入的二进制值
@@ -471,11 +482,11 @@ task signed_operation;
 begin
     // 计算结果
     case(op)
-        4'b0001: result = a + b; // 加法
-        4'b0010: result = a - b; // 减法
-        4'b0100: result = a + b; // 加法 (相同操作)
-        4'b1000: result = a - b; // 减法 (相同操作)
-        default: result = 8'b0000_0000; // 默认情况
+        OP1: result = a + b; // 加法
+        OP2: result = a - b; // 减法
+        OP3: result = a + b; // 加法 (相同操作)
+        OP4: result = a - b; // 减法 (相同操作)
+        default: result = Blank; // 默认情况
     endcase
 
     sign = result[7]; // 获取符号位
@@ -490,9 +501,9 @@ begin
 
     // 符号位作为千位
     if (sign) begin
-        seg1 = 8'b0000_0010; // 显示 "-"
+        seg1 = Minus; // 显示 "-"
     end else begin
-        seg1 = 8'b1111_1100; // 显示 "0"（即为正数没有符号）
+        seg1 = Num0; // 显示 "0"（即为正数没有符号）
     end
 
     // 显示百位、十位和个位
@@ -511,11 +522,11 @@ task shift_operation;
 begin
     // 根据操作代码进行相应的位移操作
     case(op)
-        4'b0001: result = a <<< b;  // 算术左移
-        4'b0010: result = a >>> b;  // 算术右移
-        4'b0100: result = a << b;   // 逻辑左移
-        4'b1000: result = a >> b;   // 逻辑右移
-        default: result = 8'b0000_0000; // 默认值
+        OP1: result = a <<< b;  // 算术左移
+        OP2: result = a >>> b;  // 算术右移
+        OP3: result = a << b;   // 逻辑左移
+        OP4: result = a >> b;   // 逻辑右移
+        default: result = Blank; // 默认值
     endcase
 end
 endtask
@@ -528,10 +539,10 @@ task bitwise_operation;
 
     begin
         case (operation)
-            4'b0001: output_result = op_a & op_b;  // 与操作
-            4'b0010: output_result = op_a | op_b;  // 或操作
-            4'b0100: output_result = ~op_a;         // 非操作
-            4'b1000: output_result = op_a ^ op_b;  // 异或操作
+            OP1: output_result = op_a & op_b;  // 与操作
+            OP2: output_result = op_a | op_b;  // 或操作
+            OP3: output_result = ~op_a;         // 非操作
+            OP4: output_result = op_a ^ op_b;  // 异或操作
             default: output_result = 8'b0;          // 默认情况
         endcase
     end
@@ -545,10 +556,10 @@ task logic_operation;
 
     begin
         case (operation)
-            4'b0001: output_result = {8{(op_a != 0) && (op_b != 0)}}; // 逻辑与操作
-            4'b0010: output_result = {8{(op_a != 0) || (op_b != 0)}}; // 逻辑或操作
-            4'b0100: output_result = {8{!(op_a != 0)}};               // 逻辑非操作
-            4'b1000: output_result = {8{(op_a != 0) ^ (op_b != 0)}}; // 逻辑异或操作
+            OP1: output_result = {8{(op_a != 0) && (op_b != 0)}}; // 逻辑与操作
+            OP2: output_result = {8{(op_a != 0) || (op_b != 0)}}; // 逻辑或操作
+            OP3: output_result = {8{!(op_a != 0)}};               // 逻辑非操作
+            OP4: output_result = {8{(op_a != 0) ^ (op_b != 0)}}; // 逻辑异或操作
             default: output_result = 8'b0;                          // 默认情况
         endcase
     end
@@ -567,18 +578,18 @@ input [7:0] data1;
     output reg [7:0] seg1;
     output reg [7:0] seg2 ;    
         begin
-            anode = 8'b0000_0000;             
+            anode = Blank;             
             anode[current_digit] = 1;       
             
             case (current_digit)
                 3'd0: seg1 = data1;
-                3'd1: seg1 = data2; // 显示 "1"
-                3'd2: seg1 = data3; // 显示 "2"
-                3'd3: seg1 = data4; // 显示 "3"
-                3'd4: seg2 = data5; // 显示 "4"
-                3'd5: seg2 = data6; // 显示 "5"
-                3'd6: seg2 = data7; // 显示 "6"
-                3'd7: seg2 = data8; // 显示 "7"
+                3'd1: seg1 = data2; 
+                3'd2: seg1 = data3; 
+                3'd3: seg1 = data4; 
+                3'd4: seg2 = data5; 
+                3'd5: seg2 = data6; 
+                3'd6: seg2 = data7; 
+                3'd7: seg2 = data8;
                 default: begin
                     seg1 = 8'b1111_1111;      // 默认不显示内容
                     seg2 = 8'b1111_1111;
