@@ -84,27 +84,44 @@ logic_operation u_logic_operation(
 );
 
 //下面的两个function用于把十进制整数（四位）转成数码管输出信号
-function [7:0] digit_to_seg1;  // 输出 8 位（包括 dp）
-    input [3:0] digit;        // 输入 4 位数字（支持 0-9 和 A-F）
+parameter Num0 = 8'b1111_1100; // "0"
+parameter Num1 = 8'b0110_0000; // "1"
+parameter Num2 = 8'b1101_1010; // "2"
+parameter Num3 = 8'b1111_0010; // "3"
+parameter Num4 = 8'b0110_0110; // "4"
+parameter Num5 = 8'b1011_0110; // "5"
+parameter Num6 = 8'b1011_1110; // "6"
+parameter Num7 = 8'b1110_0000; // "7"
+parameter Num8 = 8'b1111_1110; // "8"
+parameter Num9 = 8'b1111_0110; // "9"
+parameter NumA = 8'b1110_1110; // "A"
+parameter NumB = 8'b0011_1110; // "B"
+parameter NumC = 8'b1001_1001; // "C"
+parameter NumD = 8'b0111_1010; // "D"
+parameter NumE = 8'b1001_1110; // "E"
+parameter NumF = 8'b1000_1110; // "F"
+parameter Blank = 8'b0000_0000; // 空白
+function [7:0] digit_to_seg1;
+    input [3:0] digit;  // 输入 4 位数字（支持 0-9 和 A-F）
     begin
         case (digit)
-            4'd0: digit_to_seg1 = 8'b1111_1100; // 显示 "0"
-            4'd1: digit_to_seg1 = 8'b0110_0000; // 显示 "1"
-            4'd2: digit_to_seg1 = 8'b1101_1010; // 显示 "2"
-            4'd3: digit_to_seg1 = 8'b1111_0010; // 显示 "3"
-            4'd4: digit_to_seg1 = 8'b0110_0110; // 显示 "4"
-            4'd5: digit_to_seg1 = 8'b1011_0110; // 显示 "5"
-            4'd6: digit_to_seg1 = 8'b1011_1110; // 显示 "6"
-            4'd7: digit_to_seg1 = 8'b1110_0000; // 显示 "7"
-            4'd8: digit_to_seg1 = 8'b1111_1110; // 显示 "8"
-            4'd9: digit_to_seg1 = 8'b1111_0110; // 显示 "9"
-            4'd10: digit_to_seg1 = 8'b1110_1110; // 显示 "A" -> abc_defg_
-            4'd11: digit_to_seg1 = 8'b0011_1110; // 显示 "B" -> _bcdefg_
-            4'd12: digit_to_seg1 = 8'b1001_1001; // 显示 "C" -> a_def___
-            4'd13: digit_to_seg1 = 8'b0111_1010; // 显示 "D" -> _bc_defg_
-            4'd14: digit_to_seg1 = 8'b1001_1110; // 显示 "E" -> a_defg__
-            4'd15: digit_to_seg1 = 8'b1000_1110; // 显示 "F" -> a_defg___
-            default: digit_to_seg1 = 8'b0000_0000; // 空白
+            4'd0: digit_to_seg1 = Num0; // 显示 "0"
+            4'd1: digit_to_seg1 = Num1; // 显示 "1"
+            4'd2: digit_to_seg1 = Num2; // 显示 "2"
+            4'd3: digit_to_seg1 = Num3; // 显示 "3"
+            4'd4: digit_to_seg1 = Num4; // 显示 "4"
+            4'd5: digit_to_seg1 = Num5; // 显示 "5"
+            4'd6: digit_to_seg1 = Num6; // 显示 "6"
+            4'd7: digit_to_seg1 = Num7; // 显示 "7"
+            4'd8: digit_to_seg1 = Num8; // 显示 "8"
+            4'd9: digit_to_seg1 = Num9; // 显示 "9"
+            4'd10: digit_to_seg1 = NumA; // 显示 "A"
+            4'd11: digit_to_seg1 = NumB; // 显示 "B"
+            4'd12: digit_to_seg1 = NumC; // 显示 "C"
+            4'd13: digit_to_seg1 = NumD; // 显示 "D"
+            4'd14: digit_to_seg1 = NumE; // 显示 "E"
+            4'd15: digit_to_seg1 = NumF; // 显示 "F"
+            default: digit_to_seg1 = Blank; // 空白
         endcase
     end
 endfunction
@@ -114,17 +131,17 @@ function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
     input [3:0] digit;        // 输入 4 位数字（支持 0-9 和 A-F）
     begin
         case (digit)
-            4'd0: digit_to_seg2 = 8'b1111_1100; // 显示 "0"
-            4'd1: digit_to_seg2 = 8'b0110_0000; // 显示 "1"
-            4'd2: digit_to_seg2 = 8'b1101_1010; // 显示 "2"
-            4'd3: digit_to_seg2 = 8'b1111_0010; // 显示 "3"
-            4'd4: digit_to_seg2 = 8'b0110_0110; // 显示 "4"
-            4'd5: digit_to_seg2 = 8'b1011_0110; // 显示 "5"
-            4'd6: digit_to_seg2 = 8'b1011_1110; // 显示 "6"
-            4'd7: digit_to_seg2 = 8'b1110_0000; // 显示 "7"
-            4'd8: digit_to_seg2 = 8'b1111_1110; // 显示 "8"
-            4'd9: digit_to_seg2 = 8'b1111_0110; // 显示 "9"
-            default: digit_to_seg2 = 8'b0000_0000; // 空白
+            4'd0: digit_to_seg1 = Num0; // 显示 "0"
+            4'd1: digit_to_seg1 = Num1; // 显示 "1"
+            4'd2: digit_to_seg1 = Num2; // 显示 "2"
+            4'd3: digit_to_seg1 = Num3; // 显示 "3"
+            4'd4: digit_to_seg1 = Num4; // 显示 "4"
+            4'd5: digit_to_seg1 = Num5; // 显示 "5"
+            4'd6: digit_to_seg1 = Num6; // 显示 "6"
+            4'd7: digit_to_seg1 = Num7; // 显示 "7"
+            4'd8: digit_to_seg1 = Num8; // 显示 "8"
+            4'd9: digit_to_seg1 = Num9; // 显示 "9"
+            default: digit_to_seg2 = Blank; // 空白
         endcase
     end
 endfunction
@@ -135,8 +152,9 @@ always @(posedge clk) begin//这个always服务于task：scan-display
         if (counter1 == 10000) begin // 每 1 ms 触发一次 (100 MHz 时钟)
             counter1 <= 0;
             current_digit <= current_digit + 1; // 切换到下一个数码管
-            if (current_digit == 7)
-                current_digit <= 0; // 循环激活数码管
+        end
+        if (current_digit == 8)begin //这个地方由7改成了8
+            current_digit <= 0; // 循环激活数码管
         end
     end
 
@@ -162,20 +180,25 @@ always @(posedge clk) begin
     end 
 end
 
+
 // 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001，
-//请把mode的五个值参数化
-modede
+parameter Mode1=5'b00001;
+parameter Mode2=5'b00010;
+parameter Mode3=5'b00100;
+parameter Mode4=5'b01000;
+parameter Mode5=5'b10000;
+
 always @(posedge clk) begin
     if(~mode_entered&&delay_trigger) begin
-    if (select) begin
-        case (mode)
-            5'b00001: mode <= 5'b00010;
-            5'b00010: mode <= 5'b00100;
-            5'b00100: mode <= 5'b01000;
-            5'b01000: mode <= 5'b10000;
-            5'b10000: mode <= 5'b00001;
-        endcase
-    end
+        if (select) begin
+            case (mode)
+                Mode1: mode <= Mode2;
+                Mode2: mode <= Mode3;
+                Mode3: mode <= Mode4;
+                Mode4: mode <= Mode5;
+                Mode5: mode <= Mode1;
+            endcase
+        end
     end
 end
 
