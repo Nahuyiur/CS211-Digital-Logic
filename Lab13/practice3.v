@@ -10,7 +10,6 @@ module practice3(
     output o2,
     output o3
 );
-endmodule
     reg confirm=1'b0;
     always@(posedge clk,negedge rst)begin
         if(!rst)begin
@@ -64,6 +63,7 @@ endmodule
             );
         end
     end
+    endmodule
 module display_decoder1(
     input wire [2:0] p1,
     output reg [7:0] tub_control1
