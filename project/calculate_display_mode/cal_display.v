@@ -1,46 +1,60 @@
 module cal_display (
-    input clk,               // Ê±ÖÓÊäÈë
+    input clk,               // æ—¶é’Ÿè¾“å…¥
     input confirm,
     input exit,
-    input [2:0] in1,         // ÊäÈëµÄµÚÒ»¸ö3Î»ÎŞ·ûºÅÊı
-    input [2:0] in2,         // ÊäÈëµÄµÚ¶ş¸ö3Î»ÎŞ·ûºÅÊı
+    input [2:0] in1,         // è¾“å…¥çš„ç¬¬ä¸€ä¸ª3ä½æ— ç¬¦å·æ•°
+    input [2:0] in2,         // è¾“å…¥çš„ç¬¬äºŒä¸ª3ä½æ— ç¬¦å·æ•°
     
     output reg [7:0] Seg2,
     output reg [7:0] Seg1,
     output reg [7:0] anode,
-    output reg [7:0] leds // LEDÊä³ö
+    output reg [7:0] leds // LEDè¾“å‡º
 );
-    // ÊıÂë¹ÜµÄÏÔÊ¾ÄÚÈİ¼Ä´æÆ÷
+    // æ•°ç ç®¡çš„æ˜¾ç¤ºå†…å®¹å¯„å­˜å™¨
     reg [7:0] seg2, seg3, seg4;
     reg [7:0] seg6, seg7, seg8;
 
-    // µ±Ç°ÏÔÊ¾µÄÊıÂë¹ÜË÷Òı
+    // å½“å‰æ˜¾ç¤ºçš„æ•°ç ç®¡ç´¢å¼•
     reg [2:0] current_digit = 0;   
     reg [20:0] counter1 ; 
+    
+       // ç”¨äºæ•°ç ç®¡æ‰«ææ˜¾ç¤º
+     always @(posedge clk) begin
+         counter1 <= counter1 + 1;
+         if (counter1 == 10000) begin // æ¯ 1 ms è§¦å‘ä¸€æ¬¡ (100 MHz æ—¶é’Ÿ)
+             counter1 <= 0;
+             current_digit <= current_digit + 1; // åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªæ•°ç ç®¡
+             if (current_digit == 7)
+                 current_digit <= 0; // å¾ªç¯æ¿€æ´»æ•°ç ç®¡
+         end
+     end
+        parameter S0 = 2'b00;
+        parameter S1 = 2'b01;
+        parameter S2 = 2'b10;
+        parameter S3 = 2'b11;
+    // æŒ‰é’®å»¶æ—¶æ§åˆ¶
 
-    // °´Å¥ÑÓÊ±¿ØÖÆ
-    reg delay_trigger = 0;  
-    reg is_confirm = 1'b0;
-
-    // ÊıÂë¹ÜµÄÏÔÊ¾Âë
+    reg [7:0] result;
+    reg [1:0] store = S0;
+    // æ•°ç ç®¡çš„æ˜¾ç¤ºç 
     parameter Num0 = 8'b1111_1100; // "0"
     parameter Num1 = 8'b0110_0000; // "1"
-    parameter Blank = 8'b0000_0000; // ¿Õ°×
+    parameter Blank = 8'b0000_0000; // ç©ºç™½
     
-    // Êı×Ö×ª7¶ÎÏÔÊ¾±àÂëµÄº¯Êı
+    // æ•°å­—è½¬7æ®µæ˜¾ç¤ºç¼–ç çš„å‡½æ•°
     function [7:0] digit_to_seg;
-        input [3:0] digit; 
+            input digit; 
         begin
             case (digit)
-                4'd0: digit_to_seg = Num0; // ÏÔÊ¾ "0"
-                4'd1: digit_to_seg = Num1; // ÏÔÊ¾ "1"
-                default: digit_to_seg = Blank; // ¿Õ°×
+                0: digit_to_seg = Num0; // æ˜¾ç¤º "0"
+                1: digit_to_seg = Num1; // æ˜¾ç¤º "1"
+                default: digit_to_seg = Blank; // ç©ºç™½
             endcase
         end
     endfunction
     
-    // ½«ÊäÈëÊı×ª»¯ÎªÏÔÊ¾ĞÅºÅ£¨Ö»ĞèÒªÒ»¸ö always ¿éÀ´´¦Àí£©
-    always @(in1, in2) begin
+    // å°†è¾“å…¥æ•°è½¬åŒ–ä¸ºæ˜¾ç¤ºä¿¡å·ï¼ˆåªéœ€è¦ä¸€ä¸ª always å—æ¥å¤„ç†ï¼‰
+    always @(clk) begin
         seg2 = digit_to_seg(in1[2]);
         seg3 = digit_to_seg(in1[1]);
         seg4 = digit_to_seg(in1[0]);
@@ -50,11 +64,11 @@ module cal_display (
         seg8 = digit_to_seg(in2[0]);
     end
     
-    // °´Å¥°´ÏÂÊ±¼ä¿ØÖÆ
-    reg [24:0] counter = 0; // ¼ÆÊıÆ÷
-    reg delay_trigger = 0;  // ´¥·¢ĞÅºÅ
-    localparam CLK_FREQ = 50000000; // ¼ÙÉèÊ±ÖÓÆµÂÊÎª 50MHz
-    localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5ÃëÑÓ³ÙµÄ¼ÆÊıÖµ
+    // æŒ‰é’®æŒ‰ä¸‹æ—¶é—´æ§åˆ¶
+    reg [24:0] counter = 0; // è®¡æ•°å™¨
+    reg delay_trigger = 0;  // è§¦å‘ä¿¡å·
+    localparam CLK_FREQ = 50000000; // å‡è®¾æ—¶é’Ÿé¢‘ç‡ä¸º 50MHz
+    localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5ç§’å»¶è¿Ÿçš„è®¡æ•°å€¼
     
     always @(posedge clk) begin
         if (counter < DELAY_COUNT - 1) begin
@@ -62,107 +76,81 @@ module cal_display (
             delay_trigger <= 0;
         end else begin
             counter <= 0;
-            delay_trigger <= 1; // ´¥·¢ĞÅºÅ
+            delay_trigger <= 1; // è§¦å‘ä¿¡å·
         end
     end
     
-    // ÓÃÓÚÊıÂë¹ÜÉ¨ÃèÏÔÊ¾
-    always @(posedge clk) begin
-        counter1 <= counter1 + 1;
-        if (counter1 == 10000) begin // Ã¿ 1 ms ´¥·¢Ò»´Î (100 MHz Ê±ÖÓ)
-            counter1 <= 0;
-            current_digit <= current_digit + 1; // ÇĞ»»µ½ÏÂÒ»¸öÊıÂë¹Ü
-            if (current_digit == 7)
-                current_digit <= 0; // Ñ­»·¼¤»îÊıÂë¹Ü
+    reg [24:0] counter2 = 0; // è®¡æ•°å™¨
+        reg delay_trigger2 = 0;  // è§¦å‘ä¿¡å·7
+        localparam CLK_FREQ2 = 50000000; // å‡è®¾æ—¶é’Ÿé¢‘ç‡ä¸º 50MHz
+        localparam DELAY_COUNT2 = CLK_FREQ2 / 2; // 0.5ç§’å»¶è¿Ÿçš„è®¡æ•°å€¼
+        
+        always @(posedge clk) begin
+            if (counter2 < DELAY_COUNT2 - 1) begin
+                counter2 <= counter2 + 1;
+                delay_trigger2 <= 0;
+            end else begin
+                counter2 <= 0;
+                delay_trigger2 <= 1; // è§¦å‘ä¿¡å·
+            end
         end
-    end
     
-    // °´Å¥È·ÈÏ´¦ÀíÂß¼­
-    always @(posedge clk) begin
-        if (delay_trigger && confirm) begin
-            case(is_confirm)
-                1'b0: is_confirm = 1'b1;
-                1'b1: begin 
-                    is_confirm = 1'b0;
-                    store = S0;
-                end
-                default: is_confirm = 1'b0;
-            endcase
+    
+    reg is_confirm = 0;
+    always @(posedge clk)begin
+    case(is_confirm)
+        0:begin
+        if(confirm&delay_trigger) begin
+             is_confirm<=1;
         end
+        end
+        1:begin
+        if(confirm&delay_trigger) begin
+             is_confirm<=0;
+        end
+        end
+    endcase
     end
-    
-    // ×´Ì¬»ú
-    parameter S0 = 2'b00;
-    parameter S1 = 2'b01;
-    parameter S2 = 2'b10;
-    parameter S3 = 2'b11;
-    
-    reg [7:0] result;
-    reg [1:0] store = S0;
-    
+
     always @(posedge clk) begin
-        if (is_confirm) begin
+                            
             case(store)
-                S1: begin 
+                S0: begin
+                    result<=8'b0;
+                    leds <= result;
+                    store <= S1;
+                    end
+                S1: begin
                     result <= result + in1 * in2[0];
                     leds <= result;
-                end
+                    store <= S2;
+                    end
                 S2: begin
                     result <= result + in1 * in2[1];
                     leds <= result;
-                end
+                    store <= S3;
+                    end
                 S3: begin
                     result <= result + in1 * in2[2];
-                    leds <= result;
-                end
-                S0: begin
-                    result <= 0;
-                    leds <= result;
-                end
-                default: store <= store;
+                    leds <= result;                
+                    is_confirm<=0;
+                    store <= S0;
+                    end
             endcase
         end
-    end
-    
-    // ×´Ì¬»ú¶¨Ê±Æ÷
-    localparam MAX_COUNT = 300_000_000;
-    reg [28:0] cnt;
-    always @(posedge clk) begin
-        if (is_confirm) begin
-            if (cnt < MAX_COUNT - 1) begin
-                cnt <= cnt + 1;
-            end else begin
-                cnt <= 0;  // ÖØÖÃ¼ÆÊıÆ÷ 
-                case(store)
-                    S0: begin
-                        store <= S1;
-                        cnt <= MAX_COUNT - 10;
-                    end
-                    S1: begin
-                        store <= S2;
-                    end
-                    S2: begin
-                        store <= S3;
-                    end
-                    S3: begin
-                    end
-                    default: store <= S0;
-                endcase
-            end
-        end
-    end
+   
 
-    // ÏÔÊ¾É¨ÃèÈÎÎñ
+    // æ˜¾ç¤ºæ‰«æä»»åŠ¡
     reg [7:0] seg1_tmp, seg2_tmp;
         
-    // ½«ÏÔÊ¾ĞÅºÅ´«µİ¸øÊµ¼ÊµÄÊä³ö
+    // å°†æ˜¾ç¤ºä¿¡å·ä¼ é€’ç»™å®é™…çš„è¾“å‡º
     always @(posedge clk) begin
         display_scan(seg2, seg3, seg4, seg6, seg7, seg8, current_digit, anode, seg1_tmp, seg2_tmp);
         Seg1 <= seg1_tmp;
         Seg2 <= seg2_tmp;
     end
 
-    // ÏÔÊ¾É¨ÃèµÄÈÎÎñº¯Êı
+    // æ˜¾ç¤ºæ‰«æçš„ä»»åŠ¡å‡½æ•°
     task display_scan;
         input [7:0] data2;
         input [7:0] data3;
@@ -170,26 +158,26 @@ module cal_display (
         input [7:0] data6;
         input [7:0] data7;
         input [7:0] data8;
-        input [2:0] current_digit;   // µ±Ç°ÏÔÊ¾µÄÊıÂë¹ÜË÷Òı (0-7)
-        output reg [7:0] anode;       // ÊıÂë¹ÜÊ¹ÄÜĞÅºÅ£¨¶¯Ì¬É¨Ãè£©
-        output reg [7:0] seg1;        // µÚÒ»×éÊıÂë¹ÜµÄÏÔÊ¾ÄÚÈİ
-        output reg [7:0] seg2;        // µÚ¶ş×éÊıÂë¹ÜµÄÏÔÊ¾ÄÚÈİ
+        input [2:0] current_digit;   // å½“å‰æ˜¾ç¤ºçš„æ•°ç ç®¡ç´¢å¼• (0-7)
+        output reg [7:0] anode;       // æ•°ç ç®¡ä½¿èƒ½ä¿¡å·ï¼ˆåŠ¨æ€æ‰«æï¼‰
+        output reg [7:0] seg1;        // ç¬¬ä¸€ç»„æ•°ç ç®¡çš„æ˜¾ç¤ºå†…å®¹
+        output reg [7:0] seg2;        // ç¬¬äºŒç»„æ•°ç ç®¡çš„æ˜¾ç¤ºå†…å®¹
     begin
-        // ³õÊ¼»¯Ê¹ÄÜĞÅºÅ£¬¹Ø±ÕËùÓĞÊıÂë¹Ü
+        // åˆå§‹åŒ–ä½¿èƒ½ä¿¡å·ï¼Œå…³é—­æ‰€æœ‰æ•°ç ç®¡
         anode = 8'b0000_0000;         
-        anode[current_digit] = 1;     // Ê¹ÄÜµ±Ç°Êı×ÖËùÔÚµÄÊıÂë¹Ü
+        anode[current_digit] = 1;     // ä½¿èƒ½å½“å‰æ•°å­—æ‰€åœ¨çš„æ•°ç ç®¡
         
-        // ¸ù¾İµ±Ç°ÊıÂë¹ÜË÷ÒıÑ¡ÔñÏÔÊ¾µÄÊı¾İ
+        // æ ¹æ®å½“å‰æ•°ç ç®¡ç´¢å¼•é€‰æ‹©æ˜¾ç¤ºçš„æ•°æ®
         case (current_digit)
-            3'd1: seg1 = data2;    // ÏÔÊ¾ data2
-            3'd2: seg1 = data3;    // ÏÔÊ¾ data3
-            3'd3: seg1 = data4;    // ÏÔÊ¾ data4
-            3'd5: seg2 = data6;    // ÏÔÊ¾ data6
-            3'd6: seg2 = data7;    // ÏÔÊ¾ data7
-            3'd7: seg2 = data8;    // ÏÔÊ¾ data8
+            3'd1: seg1 = data2;    // æ˜¾ç¤º data2
+            3'd2: seg1 = data3;    // æ˜¾ç¤º data3
+            3'd3: seg1 = data4;    // æ˜¾ç¤º data4
+            3'd5: seg2 = data6;    // æ˜¾ç¤º data6
+            3'd6: seg2 = data7;    // æ˜¾ç¤º data7
+            3'd7: seg2 = data8;    // æ˜¾ç¤º data8
             default: begin
-                seg1 = 8'b1111_1111;   // Ä¬ÈÏ²»ÏÔÊ¾ÄÚÈİ
-                seg2 = 8'b1111_1111;
+                seg1 = Blank;   // é»˜è®¤ä¸æ˜¾ç¤ºå†…å®¹
+                seg2 = Blank;
             end
         endcase
     end
