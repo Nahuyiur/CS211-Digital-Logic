@@ -8,10 +8,9 @@ module Study_top(
     input select,             // 切换按钮   
     input data,
     input [7:0] in,  
-    output reg[1:0] result,//判断对错
+    //output reg[1:0] result,//判断对错
    
-  
-
+    output reg[7:0] mode3_amount,
     output reg[7:0] Seg1,        // 前四个数码管
     output reg[7:0] Seg2,        // 后四个数码管
     output reg[7:0] anode       // 数码管使能信号（动态扫描）
@@ -656,7 +655,9 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         end
         endcase
         end
-     3'b111:begin//比较答案判断对错,同时学情数据
+     3'b111:
+     if(confirm&&delay_trigger) 
+     begin//比较答案判断对错,同时学情数据
             case (mode)
         5'b00001:begin
          if (user_input_mode1[0] == mode1_answer[0] &&user_input_mode1[1] == mode1_answer[1] && user_input_mode1[2] == mode1_answer[2] && user_input_mode1[3] == mode1_answer[3] && user_input_mode1[4] == mode1_answer[4] && user_input_mode1[5] == mode1_answer[5] && user_input_mode1[6] == mode1_answer[6] && user_input_mode1[7] == mode1_answer[7] ) begin
@@ -724,9 +725,6 @@ end
             end
         end
       endcase
-
-
-
         end
     endcase
         end
