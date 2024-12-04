@@ -1,15 +1,64 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2024/12/04 15:10:21
+// Design Name: 
+// Module Name: practice3
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
 module practice3(
     input rst,
     input clk,
     input eva,
-    input [2:0] in1,
-    input [2:0] in2,
-    output seg1,
-    output seg2,
-    output o1,
-    output o2,
-    output o3
+    input [1:0] in1,
+    input [1:0] in2,
+    output [7:0]seg1,
+    output [7:0]seg2,
+    output reg o1,
+    output reg o2,
+    output reg o3,
+    output s1,
+    output s2
+    
+
 );
+assign s1 = 1;
+assign s2 = 1;
+reg [1:0]in11=0;
+reg [1:0]in22=0;
+
+always@(posedge clk)begin
+    if(!confirm)begin
+        in11<=2'b11;in22<=2'b11;
+    end
+    else begin
+        in11<=in1;in22<=in2;
+    end
+end
+display_decoder1 dec1_inst (
+            .p1(in11),
+            .tub_control1(seg1)
+            );
+        
+display_decoder2 dec2_inst (
+            .p2(in22),
+            .tub_control2(seg2)
+            );
+
     reg confirm=1'b0;
     always@(posedge clk,negedge rst)begin
         if(!rst)begin
@@ -36,58 +85,37 @@ module practice3(
             default:
                 {o1, o2, o3} <= 3'b000;
             endcase 
-
-        display_decoder1 dec1_inst (
-            .p1(in1),
-            .tub_control1(seg1)
-            );
-        
-        display_decoder2 dec2_inst (
-            .p2(in2),
-            .tub_control2(seg2)
-            );
         end
-
-        else 
-
-        begin
-            o1<=0;o2<=0;o3<=0;
-            display_decoder1 dec1_inst (
-            .p1(3'b000),
-            .tub_control1(seg1)
-            );
-        
-        display_decoder2 dec2_inst (
-            .p2(3'b000),
-            .tub_control2(seg2)
-            );
+        else begin
+            {o1,o2,o3}<=3'b000;
         end
     end
     endmodule
 module display_decoder1(
-    input wire [2:0] p1,
+    input wire [1:0] p1,
     output reg [7:0] tub_control1
 );
     always @(p1) begin  
         case (p1)  
-            2'b001: tub_control1 = 8'b00001010;
-            2'b010: tub_control1 = 8'b11001110;
-            2'b100: tub_control1 = 8'b10110110;
+            2'b00: tub_control1 = 8'b00001010;
+            2'b01: tub_control1 = 8'b11001110;
+            2'b10: tub_control1 = 8'b10110110;
             default: tub_control1 = 8'b00000000;
         endcase  
     end  
 endmodule
 
 module display_decoder2(
-    input wire [2:0] p2,
+    input wire [1:0] p2,
     output reg [7:0] tub_control2
 );
     always @(p2) begin  
         case (p2)  
-            2'b001: tub_control2 = 8'b00001010;
-            2'b010: tub_control2 = 8'b11001110;
-            2'b100: tub_control2 = 8'b10110110;
+            2'b00: tub_control2 = 8'b00001010;
+            2'b01: tub_control2 = 8'b11001110;
+            2'b10: tub_control2 = 8'b10110110;
             default: tub_control2 = 8'b00000000;
         endcase  
     end  
 endmodule
+
