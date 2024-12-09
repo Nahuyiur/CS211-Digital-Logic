@@ -8,10 +8,8 @@ module Study_top(
     input select,             // 切换按钮   
     input data,
     input [7:0] in,  
-    output reg[1:0] result,//判断对错
-   
-  
-
+ 
+    output reg answer_result,
     output reg[7:0] Seg1,        // 前四个数码管
     output reg[7:0] Seg2,        // 后四个数码管
     output reg[7:0] anode       // 数码管使能信号（动态扫描）
@@ -22,32 +20,20 @@ module Study_top(
    reg[4:0] data_mode_state  = 5'b00001;//这个用于学情显示下的模式，并不代表真正的模式
   
    reg [7:0] user_input_mode1 [7:0]; //存储模式1下用户输入的八个数据
-   reg [7:0] user_input_mode2 [3:0] ; //存储模式2下用户输入的四个数据
+   reg [7:0] user_input_mode2 ; //存储模式2下用户输入的四个数据
    reg [7:0] user_input_mode3 = 8'b0; 
    reg [7:0] user_input_mode4 = 8'b0;
    reg [7:0] user_input_mode5 = 8'b0;   
 
-//  reg user_input_mode1[0] = 8'b0;
-//  reg user_input_mode1[1] = 8'b0;
-//  reg user_input_mode1[2] = 8'b0;
-//  reg user_input_mode1[3] = 8'b0;
-//  reg user_input_mode1[4] = 8'b0;
-//  reg user_input_mode1[5] = 8'b0;
-//  reg user_input_mode1[6] = 8'b0;
-//  reg user_input_mode1[7] = 8'b0;
+
 
     reg [7:0] mode1_answer [7:0] ;//八，十，十六 分别的百十个位，高低位
-    reg [7:0] mode2_answer [3:0] ;//千百十个
+    reg [7:0] mode2_answer[3:0]  ;//千百十个
     reg[7:0] mode3_answer = 8'b0;
     reg[7:0] mode4_answer = 8'b0 ;
     reg[7:0] mode5_answer = 8'b0;
 
-    reg[1:0] result;
 
-
-
-
-    reg flag = 0;//表示已经加过一次
 
     reg[7:0] mode1_amount = 8'b0;
     reg[7:0] mode2_amount = 8'b0;
@@ -73,7 +59,7 @@ module Study_top(
     reg [3:0] mode5_ones= 4'b0;   // 存储模式5正确率的个位
 
   
-
+   
 
 
 
@@ -211,7 +197,7 @@ end
 //进入学情查看后的切换模式，查看相应的题目数量的正确率
 always @(posedge clk) begin
     if(data_state) begin
-    if (select) begin
+    if (select  && delay_trigger) begin
         case (data_mode_state)//非真实选择
             5'b00001: data_mode_state <= 5'b00010;
             5'b00010: data_mode_state <= 5'b00100;
@@ -293,8 +279,10 @@ always @(posedge clk) begin
     if(mode_entered&&delay_trigger&&~data_state)begin
     if (confirm) begin
         case (store)
-            3'b000: store <=3'b001;
-            
+            3'b000: begin
+            store <=3'b001;
+          
+         end   
             3'b001: begin
                 if(mode==5'b00001)begin
                 store <=3'b100;
@@ -309,33 +297,35 @@ always @(posedge clk) begin
 
 
             3'b100: begin
-              if(mode==5'b00001)begin
+            if(mode==5'b00001)begin
                
                 
-             if (counter_a < 7) begin  
-                user_input_mode1[counter_a] = in;  
-                counter_a = counter_a + 1;
+            if (counter_a < 7) begin  
+                user_input_mode1[counter_a] <= in; 
+                counter_a <= counter_a + 1;
+
                       
             end 
             else  begin
-              store =3'b111;
-              counter_a = 3'b0;
+              store <=3'b111;
+              counter_a <= 3'b0;
            
-         end       
+         end
+
         end
 
         if(mode==5'b00010)begin
-            if (counter_b < 3) begin
-                     user_input_mode2[counter_b] <= in;
-                     counter_b <= counter_b +1;
-                   
-                end
-                else begin
-              
-                counter_b <= 3'b0;
-                store <=3'b111;
-                
-                end
+           if (counter_b < 3) begin  
+                user_input_mode1[counter_b] <= in; 
+                counter_b <= counter_b + 1;
+
+                      
+            end 
+            else  begin
+              store <=3'b111;
+              counter_b <= 3'b0;
+           
+         end       
 
               
          end
@@ -356,7 +346,9 @@ always @(posedge clk) begin
             end
             end
 
-            3'b111: store <= 3'b000;
+            3'b111: store <= 3'b110;
+
+            3'b110: store <= 3'b000; 
 
     endcase
     end
@@ -374,9 +366,13 @@ end
 
 always @(posedge clk) begin
    if(data_state == 1)begin
+
+
+
+
    case(data_mode_state) 
     5'b00001:begin
-        if(mode1_amount == mode1_correct_amount )begin
+        if(mode1_amount == mode1_correct_amount &&  mode1_amount != 0)begin
         seg1 <= 8'b0110_0000;         // 显示为"1"
         seg2 <= 8'b0000_0000;         //不显示
         seg3 <= digit_to_seg2(mode1_amount /10);      //题目数量的十位
@@ -396,7 +392,7 @@ always @(posedge clk) begin
              seg4 <= digit_to_seg2(mode1_amount % 10);     //题目数量的个位
              seg5 <= 8'b0000_0000;         //不显示
              seg6 <= 8'b0000_0000;          //正确率百位 0
-             seg7  <= digit_to_seg1(mode1_tens);
+             seg7 <= digit_to_seg1(mode1_tens);
              seg8 <= digit_to_seg1(mode1_ones);
         end
         
@@ -404,7 +400,7 @@ always @(posedge clk) begin
     
     
     5'b00010:begin
-    if(mode2_amount == mode2_correct_amount )begin
+    if(mode2_amount == mode2_correct_amount &&  mode2_amount != 0 )begin
         seg1 <= 8'b1101_1010; // 显示 "2"
         seg2 <= 8'b0000_0000;         //不显示
         seg3 <= digit_to_seg2(mode2_amount /10);      //题目数量的十位
@@ -456,7 +452,7 @@ end
         end
   end  
     5'b01000:begin
-  if(mode4_amount == mode4_correct_amount )begin
+  if(mode4_amount == mode4_correct_amount &&  mode4_amount != 0)begin
         seg1 <= 8'b0110_0110; // 显示 "4"
         seg2 <= 8'b0000_0000;         //不显示
         seg3 <= digit_to_seg2(mode4_amount /10);      //题目数量的十位
@@ -481,7 +477,7 @@ end
         end
  end   
     5'b10000: begin
-   if(mode5_amount == mode5_correct_amount )begin
+   if(mode5_amount == mode5_correct_amount &&  mode5_amount != 0 )begin
         seg1 <= 8'b1011_0110; // 显示 "5"
         seg2 <= 8'b0000_0000;         //不显示
         seg3 <= digit_to_seg2(mode5_amount /10);      //题目数量的十位
@@ -539,7 +535,7 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         seg6<=8'b0;
         seg7<=8'b0;
         seg8<=8'b0;
-       result <= 2'b10;
+       
       
          case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）//疑问：对于第一种只有一种数运算符的类型怎么确定运算符
                 4'b0001: seg2 <= 8'b0110_0000; 
@@ -561,7 +557,6 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
       
     end
     3'b001: begin
-        flag <= 0;
          case (op)
                 4'b0001: seg2 <= 8'b0110_0000; 
                 4'b0010: seg2 <= 8'b1101_1010; 
@@ -599,7 +594,6 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         endcase
         seg3 <= 8'b00111010;
         seg4 <= 8'b00111110;//这个数码管输出是b，提示输入a
-     
         b<=in;
     end
     3'b100: begin//存储答案
@@ -656,28 +650,29 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         end
         endcase
         end
-     3'b111:begin//比较答案判断对错,同时学情数据
-            case (mode)
+     3'b111:
+     if(confirm&&delay_trigger) begin
+      case (mode)
         5'b00001:begin
          if (user_input_mode1[0] == mode1_answer[0] &&user_input_mode1[1] == mode1_answer[1] && user_input_mode1[2] == mode1_answer[2] && user_input_mode1[3] == mode1_answer[3] && user_input_mode1[4] == mode1_answer[4] && user_input_mode1[5] == mode1_answer[5] && user_input_mode1[6] == mode1_answer[6] && user_input_mode1[7] == mode1_answer[7] ) begin
-            result <= 2'b11;
+             answer_result <= 1'b1;
             mode1_amount <= mode1_amount + 1;
             mode1_correct_amount   <= mode1_correct_amount + 1;
           end
          else begin
-          result <= 2'b10;
+          answer_result <= 1'b0;
           mode1_amount <= mode1_amount + 1;
            end
 end     
         5'b00010:begin
             
-        if (user_input_mode2[0] == mode2_answer[0] && user_input_mode2[1] == mode2_answer[1] &&user_input_mode2[2] == mode2_answer[2]&&user_input_mode2[3] == mode2_answer[3]) begin
-            result <= 2'b11;
+        if (user_input_mode2[0]== mode2_answer[0] &&user_input_mode2[1]== mode2_answer[1] && user_input_mode2[2]== mode2_answer[2] && user_input_mode2[3]== mode2_answer[3] ) begin
+            answer_result <= 1'b0;
             mode2_amount <= mode2_amount + 1;
             mode2_correct_amount   <= mode2_correct_amount + 1;
-           end
+        end
            else begin
-                result <= 2'b10;
+                answer_result <= 1'b1;
                 mode2_amount <= mode2_amount + 1;
            end
      
@@ -686,51 +681,61 @@ end
 
         5'b00100:begin
           
-            if(user_input_mode3 != mode3_answer  )begin
-                result <= 2'b10;
+            if(user_input_mode3 != mode3_answer )begin
+                answer_result <= 1'b0;
                 mode3_amount <= mode3_amount + 1;
                
             end
             else begin
-            result <= 2'b11;
+            answer_result <= 1'b1;
             mode3_amount <= mode3_amount + 1;
             mode3_correct_amount   <= mode3_correct_amount + 1;
            end
-       
-        flag = ~flag;
     end  
          5'b01000:begin
             if(user_input_mode4 != mode4_answer)begin
-               result <= 2'b10;
+               answer_result <= 1'b0;
                mode4_amount <= mode4_amount + 1;
             end
             else 
                  begin
-                      result <= 2'b11;
+                     answer_result <= 1'b1;
                       mode4_amount <= mode4_amount + 1;
                       mode4_correct_amount   <= mode4_correct_amount + 1;
             end
         end
          5'b10000:begin
             if(user_input_mode4 != mode4_answer)begin
-                result <= 2'b10;
+                answer_result <= 1'b0;
                 mode5_amount <= mode5_amount + 1;
             end
             else 
                  begin
-                result <= 2'b11;
+                answer_result <= 1'b1;
                 mode5_amount <= mode5_amount + 1;
                mode5_correct_amount   <= mode5_correct_amount + 1;
             end
         end
-      endcase
-
-
-
-        end
     endcase
-        end
-    endcase
+end
+    3'b110: 
+          case (answer_result)
+        1'b0 : 
+         seg8 <= 8'b10011110;
+
+        1'b1:
+         seg8<= 8'b11101110;
+
+           
+        endcase  
+
+        
+    
+
+
+   endcase
+     end
+endcase
     display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
 end
 end
@@ -741,9 +746,9 @@ task convert_binary_answer;//存储正确答案
    
     begin 
         // 八进制转换逻辑
-         mode1_answer[0] =   bin_value / 64;  
-         mode1_answer[1]    =(bin_value / 8) % 8; 
-         mode1_answer[2]    =  bin_value % 8;  
+         mode1_answer[0] = bin_value / 64;  
+         mode1_answer[1] =(bin_value / 8) % 8; 
+         mode1_answer[2] = bin_value % 8;  
 
         // 十进制转换逻辑
         mode1_answer[3] = bin_value / 100;  // 百位拼接
@@ -799,24 +804,28 @@ begin
     endcase
 
     // 数字分拆
-    hundreds = abs_result / 100;        // 百位
-    tens = (abs_result / 10) % 10;      // 十位
-    ones = abs_result % 10;              // 个位
+    abs_result=abs_result%256;
+    if(abs_result>127)begin
+        abs_result=abs_result-256;
+    end
+
+    hundreds = abs_result / 100;        
+    tens = (abs_result / 10) % 10;     
+    ones = abs_result % 10;              
+
+    mode2_answer[1] = hundreds;
+    mode2_answer[2] = tens;
+    mode2_answer[3] = ones;
+    
 
     // 符号位作为千位
     if (sign) begin
-        seg1 = 8'b0000_0010; // 显示 "-"
+        mode2_answer[0] = 8'b00000001;
     end else begin
-        seg1 = 8'b1111_1100; // 显示 "0"（即为正数没有符号）
+        mode2_answer[0] = 8'b00000000; 
     end
 
-
-
- // 显示百位、十位和个位
-      // mode2_answer[0] = thousands;
-      mode2_answer[1] = hundreds;
-      mode2_answer[2] = tens;
-      mode2_answer[3] = ones;
+   
 
 
 end
