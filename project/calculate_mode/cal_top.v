@@ -20,8 +20,8 @@ module cal_top(
     output reg [7:0] leds   // LED显示
 );
 
-reg [4:0] mode = 5'b00001;            // 模式选择的储存
-reg [3:0] op = 4'b0001;              // 运算操作选择的储存
+reg [4:0] mode = 5'b00001;        // 模式选择的储存
+reg [3:0] op = 4'b0001;           // 运算操作选择的储存
 reg [1:0] store = 2'b0;           // 存储状态,00为未操作，01为存储a,10为存储b,11为输出结果
 reg [7:0] a = 8'b0;               // 运算数 a
 reg [7:0] b = 8'b0;               // 运算数 b
@@ -104,32 +104,34 @@ function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
 endfunction
 
 
-
-always @(posedge clk) begin//这个always服务于task：scan-display
-        counter1 <= counter1 + 1;
-        if (counter1 == 10000) begin // 每 1 ms 触发一次 (100 MHz 时钟)
-            counter1 <= 0;
-            current_digit <= current_digit + 1; // 切换到下一个数码管
-            if (current_digit == 7)
-                current_digit <= 0; // 循环激活数码管
-        end
+//这个always服务于task：scan-display
+localparam SCAN_DELAY = 10000;
+always @(posedge clk) begin
+    counter1 <= counter1 + 1;
+    if (counter1 == SCAN_DELAY) begin // 每 1 ms 触发一次 (100 MHz 时钟)
+        counter1 <= 0;
+        current_digit <= current_digit + 1; // 切换到下一个数码管
+        if (current_digit == 7)
+            current_digit <= 0; // 循环激活数码管
     end
+end
+
 
 always @(posedge clk) begin//该模块用于设定按下按钮的时间,只有delay_trigger变成1的时候相关always才会修改寄存器的值
-    
-        if (counter < DELAY_COUNT - 1) begin
-            counter <= counter + 1;
-            delay_trigger <= 0;
-        end else begin
-            counter <= 0;
-            delay_trigger <= 1; // 触发信号
-        end
+    if (counter < DELAY_COUNT - 1) begin
+        counter <= counter + 1;
+        delay_trigger <= 0;
+    end else begin
+        counter <= 0;
+        delay_trigger <= 1; // 触发信号
+    end
 end
 
 //该模块用于进入和退出模式，点击confirm进入模式，mode_entered=1说明进入模式
-//请把mode_entered的两个值参数化
+parameter is_enter=5'b00001;
+
 always @(posedge clk) begin
-    if(enter==5'b00001) begin
+    if(enter==is_enter) begin
     if(confirm&&delay_trigger) begin//注意判断条件有delay_trigger=1
         type_entered <= 1;      
     end 
@@ -149,10 +151,10 @@ parameter OP1=4'b00_01;
 parameter OP2=4'b00_10;
 parameter OP3=4'b01_00;
 parameter OP4=4'b10_00;
-// 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001，
-//请把mode的五个值参数化
+
+// 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001(用type做了参数化)
 always @(posedge clk) begin
-    if(enter==5'b00001) begin
+    if(enter==is_enter) begin
     if(~type_entered&&delay_trigger) begin
     if (select) begin
         case (mode)
@@ -170,7 +172,7 @@ end
 // 该模块用于每个运算类型的操作符切换，点击select按钮切换操作符op，切换顺序为：0001，0010，0100，1000，0001，
 //请把op的四个值参数化
 always @(posedge clk) begin
-    if(enter==5'b00001) begin
+    if(enter==is_enter) begin
     if(type_entered&&delay_trigger)begin
     if (select) begin
         case (op)
@@ -198,7 +200,6 @@ end
 
 // 该模块用于二元运算的操作步骤切换，点击select按钮切换步骤store，切换顺序为：00，01，10，11，00，
 //00清零之前的运算，01提示输入a并时刻显示和存储a,10提示输入b并时刻显示和存储b,11显示最终结果
-//请把store的四个值参数化
 parameter Step1=2'b00;
 parameter Step2=2'b01;
 parameter Step3=2'b10;
@@ -247,7 +248,7 @@ always @(posedge clk) begin//控制leds和seg的输出
         end
         1: begin         
     case(store)
-    2'b00: begin
+    Step1: begin
         seg3<=Blank;
         seg4<=Blank;
         seg5<=Blank;
@@ -271,7 +272,7 @@ always @(posedge clk) begin//控制leds和seg的输出
         endcase
         leds <= Blank;
     end
-    2'b01: begin
+    Step2: begin
          case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -292,7 +293,7 @@ always @(posedge clk) begin//控制leds和seg的输出
         leds <= in;//同步显示a的值
         a<=in;//存储a
     end
-    2'b10: begin
+    Step3: begin
           case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -313,13 +314,13 @@ always @(posedge clk) begin//控制leds和seg的输出
         leds <= in;
         b<=in;
     end
-    2'b11: begin
+    Step4: begin
         case (mode) //五种运算类型分别操作
-            5'b00001: begin
+            type1: begin
             convert_binary(a,seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8);
             leds<=8'b0;
             end
-            5'b00010: begin
+            type2: begin
                case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -331,7 +332,7 @@ always @(posedge clk) begin//控制leds和seg的输出
             
             leds<=8'b0;
             end
-            5'b00100: begin
+            type3: begin
                 case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -341,7 +342,7 @@ always @(posedge clk) begin//控制leds和seg的输出
             endcase
             shift_operation(a,b,op,leds);
             end
-            5'b01000: begin
+            type4: begin
                 case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -351,7 +352,7 @@ always @(posedge clk) begin//控制leds和seg的输出
             endcase
             bitwise_operation(a,b,op,leds);
             end
-            5'b10000: begin
+            type5: begin
                 case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4）
                 OP1: seg2 <= Num1; 
                 OP2: seg2 <= Num2; 
@@ -367,6 +368,7 @@ always @(posedge clk) begin//控制leds和seg的输出
         end
     endcase
 end
+
 //下面是六个task，对应五个运算类型和一个数码管显示逻辑s
 task convert_binary;
     input [7:0] bin_value; // 输入的二进制值
@@ -440,7 +442,7 @@ begin
     abs_result = 8'b0;
     // 计算结果
     case(op)
-        4'b0001: begin
+        OP1: begin
             result = a + b; // 加法
             sign = result[7]; // 获取符号位
             abs_result[6:0] = (sign) ? ~result[6:0] : result[6:0]; // 计算绝对值，注意 abs_result 范围
@@ -450,7 +452,7 @@ begin
                 abs_result = ~result+1;
         end
         end
-        4'b0010: begin
+        OP2: begin
             result = a - b; // 减法
             sign = result[7]; // 获取符号位
             abs_result[6:0] = (sign) ? ~result[6:0] : result[6:0]; // 计算绝对值，注意 abs_result 范围
@@ -460,7 +462,7 @@ begin
                 abs_result = ~result+1;
         end
         end
-        default: result = 8'b00000000; // 默认情况
+        default: result = Blank; // 默认情况
     endcase
 
     // 数字分拆
@@ -470,9 +472,9 @@ begin
 
     // 符号位作为千位
     if (sign) begin
-        seg1 = 8'b0000_0010; // 显示 "-"
+        seg1 = Minus; // 显示 "-"
     end else begin
-        seg1 = 8'b1111_1100; // 显示 "0"（即为正数没有符号）
+        seg1 = Num0; // 显示 "0"（即为正数没有符号）
     end
 
     // 显示百位、十位和个位
@@ -491,11 +493,11 @@ task shift_operation;
 begin
     // 根据操作代码进行相应的位移操作
     case(op)
-        4'b0001: result = a <<< b;  // 算术左移
-        4'b0010: result = a >>> b;  // 算术右移
-        4'b0100: result = a << b;   // 逻辑左移
-        4'b1000: result = a >> b;   // 逻辑右移
-        default: result = 9'b000000000; // 默认值
+        OP1: result = a <<< b;  // 算术左移
+        OP2: result = a >>> b;  // 算术右移
+        OP3: result = a << b;   // 逻辑左移
+        OP4: result = a >> b;   // 逻辑右移
+        default: result = Blank; // 默认值
     endcase
 end
 endtask
@@ -508,11 +510,11 @@ task bitwise_operation;
 
     begin
         case (operation)
-            4'b0001: output_result = op_a & op_b;  // 与操作
-            4'b0010: output_result = op_a | op_b;  // 或操作
-            4'b0100: output_result = ~op_a;         // 非操作
-            4'b1000: output_result = op_a ^ op_b;  // 异或操作
-            default: output_result = 8'b0;          // 默认情况
+            OP1: output_result = op_a & op_b;  // 与操作
+            OP2: output_result = op_a | op_b;  // 或操作
+            OP3: output_result = ~op_a;         // 非操作
+            OP4: output_result = op_a ^ op_b;  // 异或操作
+            default: output_result = Blank;          // 默认情况
         endcase
     end
 endtask
@@ -525,11 +527,11 @@ task logic_operation;
 
     begin
         case (operation)
-            4'b0001: output_result = {8{(op_a != 0) && (op_b != 0)}}; // 逻辑与操作
-            4'b0010: output_result = {8{(op_a != 0) || (op_b != 0)}}; // 逻辑或操作
-            4'b0100: output_result = {8{!(op_a != 0)}};               // 逻辑非操作
-            4'b1000: output_result = {8{(op_a != 0) ^ (op_b != 0)}}; // 逻辑异或操作
-            default: output_result = 8'b0;                          // 默认情况
+            OP1: output_result = {8{(op_a != 0) && (op_b != 0)}}; // 逻辑与操作
+            OP2: output_result = {8{(op_a != 0) || (op_b != 0)}}; // 逻辑或操作
+            OP3: output_result = {8{!(op_a != 0)}};               // 逻辑非操作
+            OP4: output_result = {8{(op_a != 0) ^ (op_b != 0)}}; // 逻辑异或操作
+            default: output_result = Blank;                          // 默认情况
         endcase
     end
 endtask
