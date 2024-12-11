@@ -5,6 +5,7 @@ module Power_top (
     input confirm,                  // 进入退出模式的按钮
     input select,                   // 切换模式的按钮      
     input exit,
+    input data,
     input [7:0] in,                // 拨码开关的输入   
     output reg [7:0] Seg1,         // 前四个数码管
     output reg [7:0] Seg2,         // 后四个数码管
@@ -13,7 +14,7 @@ module Power_top (
 );
 
 reg mode_entered=0;
-reg [4:0] mode_sel=5'b00001;              // 模式选择信号
+reg [3:0] mode_sel=4'b0001;              // 模式选择信号
 wire power_state;                // 电源模块的输出信号
 reg [7:0] seg1= 8'b0;    
 reg [7:0] seg2= 8'b0;     
@@ -31,8 +32,27 @@ wire [7:0] seg15;
 wire [7:0] seg16;     
 wire [7:0] seg17;             
 wire [7:0] seg18;
+wire [7:0] seg21;    
+wire [7:0] seg22;     
+wire [7:0] seg23;             
+wire [7:0] seg24;
+wire [7:0] seg25; 
+wire [7:0] seg26;     
+wire [7:0] seg27;             
+wire [7:0] seg28;
 wire [7:0] leds1;
-wire type_entered;
+wire [7:0] seg31;    
+wire [7:0] seg32;     
+wire [7:0] seg33;             
+wire [7:0] seg34;
+wire [7:0] seg35; 
+wire [7:0] seg36;     
+wire [7:0] seg37;             
+wire [7:0] seg38;
+wire [7:0] leds2;
+wire type_entered1;
+wire type_entered2;
+wire type_entered3;
 // Counter和触发器相关的信号
 reg [31:0] counter;              // 用于按钮按下的计数
 reg delay_trigger;               // 触发信号
@@ -57,7 +77,47 @@ cal_top cal (
     .seg7(seg17),
     .seg8(seg18),
     .leds(leds1),
-    .type_entered(type_entered)
+    .type_entered(type_entered1)
+);
+
+study_top study (
+    .enter(mode_sel),
+    .clk(clk),                // 时钟信号
+    .reset(reset),            // 复位信号
+    .confirm(confirm),        // 确定操作的按钮
+    .exit(exit),              // 退出按钮, 假设我们先不使用它
+    .select(select),          // 切换按钮   
+    .in(in),   
+    .data(data),               // 拨码开关的输入   
+    .seg1(seg21),
+    .seg2(seg22),
+    .seg3(seg23),
+    .seg4(seg24),
+    .seg5(seg25),
+    .seg6(seg26),
+    .seg7(seg27),
+    .seg8(seg28),
+    .mode_entered(type_entered2)
+);
+
+display display (
+    .enter(mode_sel),
+    .clk(clk),                // 时钟信号
+    .reset(reset),            // 复位信号
+    .confirm(confirm),        // 确定操作的按钮
+    .exit(exit),              // 退出按钮, 假设我们先不使用它
+    .in1(in[6:4]),  
+    .in2(in[2:0]),   
+    .seg1(seg31),
+    .seg2(seg32),
+    .seg3(seg33),
+    .seg4(seg34),
+    .seg5(seg35),
+    .seg6(seg36),
+    .seg7(seg37),
+    .seg8(seg38),
+    .leds(leds2),
+    .type_entered(type_entered3)
 );
 
 reg [2:0] current_digit = 0; 
@@ -85,7 +145,7 @@ end
 
 
 always @(posedge clk) begin
-    if(~type_entered) begin
+    if(~type_entered1&&~type_entered2&&~type_entered3) begin
     if (confirm && delay_trigger) begin
         mode_entered <= 1;            
     end 
@@ -95,11 +155,11 @@ always @(posedge clk) begin
     end
 end
 
-parameter mode1 = 5'b00001;
-parameter mode2 = 5'b00010;
-parameter mode3 = 5'b00100;
-parameter mode4 = 5'b01000;
-parameter mode5 = 5'b10000;
+parameter mode1 = 4'B0001;
+parameter mode2 = 4'b0010;
+parameter mode3 = 4'b0100;
+parameter mode4 = 4'b1000;
+
 
 always @(posedge clk) begin
     // 切换模式
@@ -109,8 +169,7 @@ always @(posedge clk) begin
                 mode1: mode_sel <= mode2;
                 mode2: mode_sel <= mode3;
                 mode3: mode_sel <= mode4;
-                mode4: mode_sel <= mode5;
-                mode5: mode_sel <= mode1;
+                mode4: mode_sel <= mode1;
             endcase
         end
     end
@@ -140,19 +199,29 @@ always @(posedge clk) begin
         end
         mode2: begin
             // 处理mode2的情况
-            seg1 <= 8'b1111_1111; // 示例输出
+            seg1 <= seg21;  
+            seg2 <= seg22;  
+            seg3 <= seg23; 
+            seg4 <= seg24;  
+            seg5 <= seg25;  
+            seg6 <= seg26;  
+            seg7 <= seg27;  
+            seg8 <= seg28;    
         end
         mode3: begin
             // 处理mode3的情况
             seg1 <= 8'b1111_1111; // 示例输出
         end
         mode4: begin
-            // 处理mode4的情况
-            seg1 <= 8'b1111_1111; // 示例输出
-        end
-        mode5: begin
-            // 处理mode5的情况
-            seg1 <= 8'b1111_1111; // 示例输出
+            seg1 <= seg31;  
+            seg2 <= seg32;  
+            seg3 <= seg33; 
+            seg4 <= seg34;  
+            seg5 <= seg35;  
+            seg6 <= seg36;  
+            seg7 <= seg37;  
+            seg8 <= seg38;     
+            leds <= leds2;
         end
         default: begin
             seg1 <= 8'b0000_0000; // 默认输出
@@ -163,18 +232,15 @@ always @(posedge clk) begin
     else begin
         case (mode_sel)
         mode1: begin
-            seg1=Num0;         
+            seg1=Num1;         
         end
         mode2: begin
-            seg1=Num1;
-        end
-        mode3: begin
             seg1=Num2;
         end
-        mode4: begin
+        mode3: begin
             seg1=Num3;
         end
-        mode5: begin
+        mode4: begin
             seg1=Num4;
         end
         default: begin

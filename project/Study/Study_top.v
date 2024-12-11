@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
-module Study_top(
+module study_top(
+    input [3:0] enter,
     input clk,                // 时钟信号
     input reset,              // 复位信号
     input confirm,            // 确定操作的按钮
@@ -8,13 +9,15 @@ module Study_top(
     input select,             // 切换按钮   
     input data,
     input [7:0] in,  
-    output reg[1:0] result,//判断对错
-   
-  
-
-    output reg[7:0] Seg1,        // 前四个数码管
-    output reg[7:0] Seg2,        // 后四个数码管
-    output reg[7:0] anode       // 数码管使能信号（动态扫描）
+    output reg mode_entered,
+    output reg[7:0] seg1,      
+    output reg[7:0] seg2,   
+    output reg[7:0] seg3,   
+    output reg[7:0] seg4,   
+    output reg[7:0] seg5,   
+    output reg[7:0] seg6,   
+    output reg[7:0] seg7,   
+    output reg[7:0] seg8 
 );
   
 //加一个状态按下按钮之后，将显示学情改为1
@@ -22,12 +25,12 @@ module Study_top(
    reg[4:0] data_mode_state  = 5'b00001;//这个用于学情显示下的模式，并不代表真正的模式
   
    reg [7:0] user_input_mode1 [7:0]; //存储模式1下用户输入的八个数据
-   reg [7:0] user_input_mode2  ; //存储模式2下用户输入的四个数据
+   reg [7:0] user_input_mode2 ; //存储模式2下用户输入的四个数据
    reg [7:0] user_input_mode3 = 8'b0; 
    reg [7:0] user_input_mode4 = 8'b0;
    reg [7:0] user_input_mode5 = 8'b0;   
 
-
+   reg answer_result = 1'b0;
 
     reg [7:0] mode1_answer [7:0] ;//八，十，十六 分别的百十个位，高低位
     reg [7:0] mode2_answer[3:0]  ;//千百十个
@@ -60,26 +63,11 @@ module Study_top(
     reg [3:0] mode5_tens= 4'b0;   // 存储模式5正确率的十位
     reg [3:0] mode5_ones= 4'b0;   // 存储模式5正确率的个位
 
-  
-   
-
-
-
-reg [7:0] seg1= 8'b0;    // 最终传入scan-display的数码管
-reg [7:0] seg2= 8'b0;     
-reg [7:0] seg3= 8'b0;             
-reg [7:0] seg4= 8'b0;
-reg [7:0] seg5= 8'b0; 
-reg [7:0] seg6= 8'b0;     
-reg [7:0] seg7= 8'b0;             
-reg [7:0] seg8= 8'b0;
-
 reg [4:0] mode = 5'b00001;            // 模式选择的储存
 reg [3:0] op = 4'b0001;              // 运算操作选择的储存
 reg [2:0] store = 3'b0;           // 存储状态,000为未操作，001为存储a,010为存储b,100为输出结果 111（未修改）
 reg [7:0] a = 8'b0;               // 运算数 a
 reg [7:0] b = 8'b0;               // 运算数 b
-reg mode_entered = 0;          // 0为未进入模式，1为已进入模式
 
 reg [2:0] counter_a = 3'b000; 
 reg [2:0] counter_b = 3'b000; 
@@ -95,7 +83,8 @@ localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5秒延迟的计数值
 reg [24:0] counter = 0; // 计数器，足够容纳 25M 的值
 reg delay_trigger = 0;  // 触发信号
 
-c 
+reg [2:0] current_digit = 0; 
+reg [20:0] counter1 = 0;   
 
 // 实例化6个子模块（都没有用）
 
@@ -171,19 +160,23 @@ end
 //该模块用于进入和退出模式，点击confirm进入模式，mode_entered=1说明进入模式
 //请把mode_entered的两个值参数化
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(confirm&&delay_trigger) begin//注意判断条件有delay_trigger=1
         mode_entered <= 1;            
     end 
     if(exit&&delay_trigger) begin
         mode_entered <= 0;       
     end 
+     end
 end
 
 
 //按下data键进入学情查看，data_state变为1，再次按下退出，data_state变为0
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(data&&delay_trigger) begin//注意判断条件有delay_trigger=1
-       data_state <= ~data_state;           
+       data_state <= ~data_state;  
+    end         
     end 
 end
 
@@ -191,8 +184,13 @@ end
 
 
 //学情的数码管显示
+
+
+
+
 //进入学情查看后的切换模式，查看相应的题目数量的正确率
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(data_state) begin
     if (select  && delay_trigger) begin
         case (data_mode_state)//非真实选择
@@ -202,6 +200,7 @@ always @(posedge clk) begin
             5'b01000: data_mode_state <= 5'b10000;
             5'b10000: data_mode_state <= 5'b00001;
         endcase
+    end
     end
    end
    
@@ -225,6 +224,7 @@ end
 //请把mode的五个值参数化
 
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(~mode_entered&&delay_trigger) begin
     if (select) begin
         case (mode)
@@ -234,6 +234,7 @@ always @(posedge clk) begin
             5'b01000: mode <= 5'b10000;
             5'b10000: mode <= 5'b00001;
         endcase
+    end
     end
    end
    
@@ -245,6 +246,7 @@ end
 // 该模块用于每个运算类型的操作符切换，点击select按钮切换操作符op，切换顺序为：0001，0010，0100，1000，0001，
 //请把op的四个值参数化
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(mode_entered&&delay_trigger)begin
     if (select) begin
         case (op)
@@ -267,12 +269,14 @@ always @(posedge clk) begin
         endcase
     end
     end
+     end
 end
 
 // 该模块用于二元运算的操作步骤切换，点击select按钮切换步骤store，切换顺序为：000，001，010，100，111
 //000清零之前的运算，001提示输入a并时刻显示和存储a,010提示输入b并时刻显示和存储b,100提示用户输入答案并存储答案 ，111显示最终结果对错
 //请把store的四个值参数化
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
     if(mode_entered&&delay_trigger&&~data_state)begin
     if (confirm) begin
         case (store)
@@ -350,6 +354,7 @@ always @(posedge clk) begin
     endcase
     end
     end
+     end
 end
 
 
@@ -362,11 +367,8 @@ end
 
 
 always @(posedge clk) begin
+     if(enter==4'b0010) begin
    if(data_state == 1)begin
-
-
-
-
    case(data_mode_state) 
     5'b00001:begin
         if(mode1_amount == mode1_correct_amount &&  mode1_amount != 0)begin
@@ -499,7 +501,6 @@ end
         end   
 end
 endcase
-display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);  
   end  
   else begin
         case(mode_entered)
@@ -647,8 +648,9 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         end
         endcase
         end
-     3'b111:begin//比较答案判断对错,同时学情数据
-            case (mode)
+     3'b111:
+     if(confirm&&delay_trigger) begin
+      case (mode)
         5'b00001:begin
          if (user_input_mode1[0] == mode1_answer[0] &&user_input_mode1[1] == mode1_answer[1] && user_input_mode1[2] == mode1_answer[2] && user_input_mode1[3] == mode1_answer[3] && user_input_mode1[4] == mode1_answer[4] && user_input_mode1[5] == mode1_answer[5] && user_input_mode1[6] == mode1_answer[6] && user_input_mode1[7] == mode1_answer[7] ) begin
              answer_result <= 1'b1;
@@ -712,16 +714,28 @@ end
                mode5_correct_amount   <= mode5_correct_amount + 1;
             end
         end
-      endcase
-
-
-
-        end
     endcase
-        end
-    endcase
-    display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
 end
+    3'b110: 
+          case (answer_result)
+        1'b0 : 
+         seg8 <= 8'b10011110;
+
+        1'b1:
+         seg8<= 8'b11101110;
+
+           
+        endcase  
+
+        
+    
+
+
+   endcase
+     end
+endcase
+end
+     end
 end
 
 //下面是六个task，对应五个运算类型和一个数码管显示逻辑s
@@ -881,41 +895,5 @@ task logic_operation_answer;
            mode5_answer =   output_result;
     end
 endtask
-
-task display_scan1;
-    input [7:0] data1;
-    input [7:0] data2;
-    input [7:0] data3;
-    input [7:0] data4;
-    input [7:0] data5;
-    input [7:0] data6;
-    input [7:0] data7;
-    input [7:0] data8;
-    output reg [7:0] anode;      // 数码管使能信号（动态扫描）
-    output reg [7:0] seg1;
-    output reg [7:0] seg2 ;    
-        begin
-            anode = 8'b0000_0000;             
-            anode[current_digit] = 1;       
-            
-            case (current_digit)
-                3'd0: seg1 = data1; 
-                3'd1: seg1 = data2; // 显示 "1"
-                3'd2: seg1 = data3; // 显示 "2"
-                3'd3: seg1 = data4; // 显示 "3"
-                3'd4: seg2 = data5; // 显示 "4"
-                3'd5: seg2 = data6; // 显示 "5"
-                3'd6: seg2 = data7; // 显示 "6"
-                3'd7: seg2 = data8; // 显示 "7"
-                default: begin
-                    seg1 = 8'b1111_1111;  
-                    seg2 = 8'b1111_1111;
-                end 
-            endcase
-        end
-    endtask
-
-
-
 
 endmodule
