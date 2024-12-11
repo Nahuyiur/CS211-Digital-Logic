@@ -8,8 +8,10 @@ module Study_top(
     input select,             // 切换按钮   
     input data,
     input [7:0] in,  
- 
-    output reg answer_result,
+    output reg[1:0] result,//判断对错
+   
+  
+
     output reg[7:0] Seg1,        // 前四个数码管
     output reg[7:0] Seg2,        // 后四个数码管
     output reg[7:0] anode       // 数码管使能信号（动态扫描）
@@ -20,7 +22,7 @@ module Study_top(
    reg[4:0] data_mode_state  = 5'b00001;//这个用于学情显示下的模式，并不代表真正的模式
   
    reg [7:0] user_input_mode1 [7:0]; //存储模式1下用户输入的八个数据
-   reg [7:0] user_input_mode2 ; //存储模式2下用户输入的四个数据
+   reg [7:0] user_input_mode2  ; //存储模式2下用户输入的四个数据
    reg [7:0] user_input_mode3 = 8'b0; 
    reg [7:0] user_input_mode4 = 8'b0;
    reg [7:0] user_input_mode5 = 8'b0;   
@@ -93,8 +95,7 @@ localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5秒延迟的计数值
 reg [24:0] counter = 0; // 计数器，足够容纳 25M 的值
 reg delay_trigger = 0;  // 触发信号
 
-reg [2:0] current_digit = 0; 
-reg [20:0] counter1 = 0;   
+c 
 
 // 实例化6个子模块（都没有用）
 
@@ -190,10 +191,6 @@ end
 
 
 //学情的数码管显示
-
-
-
-
 //进入学情查看后的切换模式，查看相应的题目数量的正确率
 always @(posedge clk) begin
     if(data_state) begin
@@ -650,9 +647,8 @@ display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
         end
         endcase
         end
-     3'b111:
-     if(confirm&&delay_trigger) begin
-      case (mode)
+     3'b111:begin//比较答案判断对错,同时学情数据
+            case (mode)
         5'b00001:begin
          if (user_input_mode1[0] == mode1_answer[0] &&user_input_mode1[1] == mode1_answer[1] && user_input_mode1[2] == mode1_answer[2] && user_input_mode1[3] == mode1_answer[3] && user_input_mode1[4] == mode1_answer[4] && user_input_mode1[5] == mode1_answer[5] && user_input_mode1[6] == mode1_answer[6] && user_input_mode1[7] == mode1_answer[7] ) begin
              answer_result <= 1'b1;
@@ -716,26 +712,14 @@ end
                mode5_correct_amount   <= mode5_correct_amount + 1;
             end
         end
+      endcase
+
+
+
+        end
     endcase
-end
-    3'b110: 
-          case (answer_result)
-        1'b0 : 
-         seg8 <= 8'b10011110;
-
-        1'b1:
-         seg8<= 8'b11101110;
-
-           
-        endcase  
-
-        
-    
-
-
-   endcase
-     end
-endcase
+        end
+    endcase
     display_scan1(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
 end
 end
