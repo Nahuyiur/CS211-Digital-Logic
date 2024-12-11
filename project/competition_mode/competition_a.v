@@ -267,7 +267,7 @@ always @(posedge clk) begin
                  seg1 <= 8'b1101_1010; 
                  mode_question[total][22:18] <= 5'b00010;
                  mode_question[total][15:8]  <= in;
-                 total <= total + 1'b1;
+                
 
             end
 
@@ -295,7 +295,6 @@ always @(posedge clk) begin
                  mode_question[total][22:18] <= 5'b00100;
                  mode_question[total][15:8]  <= in;
             
-                 total <= total + 1'b1;
 
             end
 
@@ -322,12 +321,11 @@ always @(posedge clk) begin
                 seg1 <= 8'b0110_0110; 
                  mode_question[total][22:18] <= 5'b01000;
                  mode_question[total][15:8]  <= in;
-           
-                 total <= total + 1'b1;
+        
 
             end
 
-            5'b00001:begin
+            5'b10000:begin
             case (op)
                 4'b0001: begin
                 seg2 <= 8'b0110_0000;
@@ -351,7 +349,6 @@ always @(posedge clk) begin
                  mode_question[total][22:18] <= 5'b10000;
                  mode_question[total][15:8]  <= in;
            
-                 total <= total + 1'b1;
 
             end
         endcase
@@ -373,9 +370,8 @@ end
                 default: seg2 <= 8'b0000_0000; 
             endcase
                  seg1 <= 8'b1101_1010; 
-               
-                 mode_question[total][7:0]  <= in;
-               
+                mode_question[total][7:0]  <= in;
+                total <= total + 1'b1;
 
             end
 
@@ -397,7 +393,7 @@ end
             endcase
                 seg1 <= 8'b1111_0010; 
                  mode_question[total][7:0]  <= in;
-                
+                 total <= total + 1'b1;
             end
 
             5'b01000:begin
@@ -418,10 +414,10 @@ end
             endcase
                 seg1 <= 8'b0110_0110; 
                  mode_question[total][7:0]  <= in;
-                
+                 total <= total + 1'b1;
             end
 
-            5'b00001:begin
+            5'b10000:begin
             case (op)
                 4'b0001: begin 
                 seg2 <= 8'b0110_0000;
@@ -438,8 +434,8 @@ end
                 default: seg2 <= 8'b0000_0000;
             endcase
                 seg1 <= 8'b1011_0110; 
-                 mode_question[total][7:0]  <= in;
-               
+                 mode_question[total][7:0] <= in;
+                total <= total + 1'b1;
 
             end
         endcase
