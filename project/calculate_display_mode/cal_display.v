@@ -22,20 +22,23 @@ module display (
     reg [2:0] current_digit = 0;   
     reg [20:0] counter1 ; 
     
-       // 用于数码管扫描显示
+    // 用于数码管扫描显示
+    localparam SCAN_DELAY = 10000;
      always @(posedge clk) begin
          counter1 <= counter1 + 1;
-         if (counter1 == 10000) begin // 每 1 ms 触发一次 (100 MHz 时钟)
+         if (counter1 == SCAN_DELAY) begin // 每 1 ms 触发一次 (100 MHz 时钟)
              counter1 <= 0;
              current_digit <= current_digit + 1; // 切换到下一个数码管
              if (current_digit == 7)
                  current_digit <= 0; // 循环激活数码管
          end
      end
-        parameter S0 = 2'b00;
-        parameter S1 = 2'b01;
-        parameter S2 = 2'b10;
-        parameter S3 = 2'b11;
+
+    //参数化表示4个计算演示的显示阶段
+    parameter S0 = 2'b00;
+    parameter S1 = 2'b01;
+    parameter S2 = 2'b10;
+    parameter S3 = 2'b11;
     // 按钮延时控制
 
     reg [7:0] result;
@@ -74,34 +77,33 @@ module display (
     end
     
     reg [28:0] counter2 = 0; // 计数器
-        reg delay_trigger2 = 0;  // 触发信号7
-        localparam CLK_FREQ2 = 300000000; // 假设时钟频率为 50MHz
-        localparam DELAY_COUNT2 = CLK_FREQ2 / 2; // 0.5秒延迟的计数值
+    reg delay_trigger2 = 0;  // 触发信号7
+    localparam CLK_FREQ2 = 300000000; // 假设时钟频率为 50MHz
+    localparam DELAY_COUNT2 = CLK_FREQ2 / 2; // 0.5秒延迟的计数值
         
-        always @(posedge clk) begin
-            if (counter2 < DELAY_COUNT2 - 1) begin
-                counter2 <= counter2 + 1;
-                delay_trigger2 <= 0;
-            end else begin
-                counter2 <= 0;
-                delay_trigger2 <= 1; // 触发信号
-            end
+    always @(posedge clk) begin
+        if (counter2 < DELAY_COUNT2 - 1) begin
+            counter2 <= counter2 + 1;
+            delay_trigger2 <= 0;
+        end else begin
+            counter2 <= 0;
+            delay_trigger2 <= 1; // 触发信号
         end
+    end
 
-        always @(posedge clk) begin
-            if(enter==4'b1000) begin
-            if (exit) begin
-                type_entered=0;
-            end 
-            if (confirm&&delay_trigger) begin
-                type_entered=1;
-            end
-            end
+    always @(posedge clk) begin
+        if(enter==4'b1000) begin
+        if (exit) begin
+            type_entered=0;
+        end 
+        if (confirm&&delay_trigger) begin
+            type_entered=1;
         end
+        end
+    end
     
     
-    reg is_confirm = 0;
-   
+    reg is_confirm = 0;//是否确定计算结果
 
     always @(posedge clk) begin
         if(enter==4'b1000) begin
@@ -138,7 +140,7 @@ module display (
             endcase
                 end
         end
-    endcase
+        endcase
         end
         if(~type_entered) begin
             leds<=8'b0;
@@ -150,26 +152,25 @@ module display (
     always @(posedge clk) begin
         if(enter==4'b1000) begin
         if(type_entered==1) begin
-        seg1 = 8'b00000000;
+        seg1 = Blank;
         seg2 = digit_to_seg(in1[2]);
         seg3 = digit_to_seg(in1[1]);
         seg4 = digit_to_seg(in1[0]);
-        seg5 = 8'b00000000;
+        seg5 = Blank;
         seg6 = digit_to_seg(in2[2]);
         seg7 = digit_to_seg(in2[1]);
         seg8 = digit_to_seg(in2[0]);
         end
         else begin
-        seg2 =  8'b00000000;
-        seg3 =  8'b00000000;
-        seg4 =  8'b00000000;
-        seg5 =  8'b00000000;
-        seg6 =  8'b00000000;
-        seg7 =  8'b00000000;
-        seg8 =  8'b00000000;
+        seg2 =  Blank;
+        seg3 =  Blank;
+        seg4 =  Blank;
+        seg5 =  Blank;
+        seg6 =  Blank;
+        seg7 =  Blank;
+        seg8 =  Blank;
         end
         end
     end
-
 
 endmodule
