@@ -1,26 +1,22 @@
-module cal_display (
+module display (
+    input [3:0] enter,
     input clk,               // 时钟输入
+    input reset,  
     input confirm,
     input exit,
     input [2:0] in1,         // 输入的第一个3位无符号数
     input [2:0] in2,         // 输入的第二个3位无符号数
-    
-    output reg [7:0] Seg2,
-    output reg [7:0] Seg1,
-    output reg [7:0] anode,
+    output reg type_entered,
+    output reg [7:0] seg1,
+    output reg [7:0] seg2,
+    output reg [7:0] seg3,
+    output reg [7:0] seg4,
+    output reg [7:0] seg5,
+    output reg [7:0] seg6,
+    output reg [7:0] seg7,
+    output reg [7:0] seg8,
     output reg [7:0] leds // LED输出
 );
-    // 数码管的显示内容寄存器
-    reg [7:0] seg1 = 8'b0;
-    reg [7:0] seg2 = 8'b0;
-    reg [7:0] seg3 = 8'b0;
-    reg [7:0] seg4 = 8'b0;
-    reg [7:0] seg5 = 8'b0;
-    reg [7:0] seg6 = 8'b0;
-    reg [7:0] seg7 = 8'b0;
-    reg [7:0] seg8 = 8'b0;
-    
-    
 
     // 当前显示的数码管索引
     reg [2:0] current_digit = 0;   
@@ -91,12 +87,24 @@ module cal_display (
                 delay_trigger2 <= 1; // 触发信号
             end
         end
+
+        always @(posedge clk) begin
+            if(enter==4'b1000) begin
+            if (exit) begin
+                type_entered=0;
+            end 
+            if (confirm&&delay_trigger) begin
+                type_entered=1;
+            end
+            end
+        end
     
     
     reg is_confirm = 0;
    
 
     always @(posedge clk) begin
+        if(enter==4'b1000) begin
         case(is_confirm)
             0:begin
                 if(confirm&delay_trigger) begin
@@ -118,12 +126,12 @@ module cal_display (
                     store <= S2;
                     end
                 S2: begin
-                    result <= result + in1 * in2[1];
+                    result <= result + in1 * in2[1]*2;
                     leds <= result;
                     store <= S3;
                     end
                 S3: begin
-                    result <= result + in1 * in2[2];
+                    result <= result + in1 * in2[2]*4;
                     leds <= result;               
                     store <= S0;
                     end
@@ -132,10 +140,16 @@ module cal_display (
         end
     endcase
         end
+        if(~type_entered) begin
+            leds<=8'b0;
+        end
+        end
    
         
     // 将显示信号传递给实际的输出
     always @(posedge clk) begin
+        if(enter==4'b1000) begin
+        if(type_entered==1) begin
         seg1 = 8'b00000000;
         seg2 = digit_to_seg(in1[2]);
         seg3 = digit_to_seg(in1[1]);
@@ -144,37 +158,18 @@ module cal_display (
         seg6 = digit_to_seg(in2[2]);
         seg7 = digit_to_seg(in2[1]);
         seg8 = digit_to_seg(in2[0]);
-        display_scan(seg1,seg2, seg3, seg4, seg5,seg6, seg7, seg8, anode, Seg1, Seg2);
+        end
+        else begin
+        seg2 =  8'b00000000;
+        seg3 =  8'b00000000;
+        seg4 =  8'b00000000;
+        seg5 =  8'b00000000;
+        seg6 =  8'b00000000;
+        seg7 =  8'b00000000;
+        seg8 =  8'b00000000;
+        end
+        end
     end
 
-    // 显示扫描的任务函数
-   task display_scan;
-    input [7:0] data1;
-    input [7:0] data2;
-    input [7:0] data3;
-    input [7:0] data4;
-    input [7:0] data5;
-    input [7:0] data6;
-    input [7:0] data7;
-    input [7:0] data8;
-    output reg [7:0] anode;      // 数码管使能信号（动态扫描）
-    output reg [7:0] seg1;
-    output reg [7:0] seg2 ;    
-        begin
-            anode = 8'b0000_0000;             
-            anode[current_digit] = 1;       
-            
-            case (current_digit)
-                3'd0: seg1 = data1; 
-                3'd1: seg1 = data2; // 显示 "1"
-                3'd2: seg1 = data3; // 显示 "2"
-                3'd3: seg1 = data4; // 显示 "3"
-                3'd4: seg2 = data5; // 显示 "4"
-                3'd5: seg2 = data6; // 显示 "5"
-                3'd6: seg2 = data7; // 显示 "6"
-                3'd7: seg2 = data8; // 显示 "7"
-            endcase
-        end
-    endtask
 
 endmodule
