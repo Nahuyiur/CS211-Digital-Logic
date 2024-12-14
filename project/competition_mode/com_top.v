@@ -16,7 +16,6 @@ module competition_top (
 reg mode_entered;
 wire [1049:0] mode_question_flat;
 wire [5999:0] player_flat;
-wire [63:0] score_flat;
 wire [5:0] total_question;
 reg [2:0] mode_sel=3'b001;              // 模式选择信号
 wire power_state;                // 电源模块的输出信号
@@ -116,7 +115,6 @@ answer answer (
 review review (
     .mode_question_flat(mode_question_flat),
     .player_flat(player_flat),
-    .score_flat(score_flat),
     .mode_sel(mode_sel),
     .clk(clk),                // 时钟信号
     .reset(reset),            // 复位信号
