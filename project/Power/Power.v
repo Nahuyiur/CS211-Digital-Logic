@@ -6,7 +6,7 @@ module Power (
   
 );
 
-  localparam STATE_OFF           = 1'b0; 
+    localparam STATE_OFF           = 1'b0; 
     localparam STATE_STANDBY      = 1'b1;  
 
     reg current_state, next_state;
