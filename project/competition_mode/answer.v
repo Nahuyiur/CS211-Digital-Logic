@@ -21,6 +21,7 @@
 
  
 module answer (
+    input wire [5:0] total,    //赛题总数
     input wire [2:0] mode,
     input clk,
     input reset,
@@ -41,32 +42,52 @@ module answer (
     output reg [7:0] led1,
     output reg [7:0] led2,
     output reg mode_entered,
-    output reg[119:0] player_flat 
+    output reg[5999:0] player_flat,
+    output reg [63:0]score_flat 
     );
     reg [20:0] question [49:0];
-    integer i;
-// 在 `always` 块中将二维数组展平为一维数组：
-always @(posedge clk) begin
-    // 将二维数组展平为一维数组
-    for (i = 0; i < 50; i = i + 1) begin
-        question[i]=mode_question_flat[i * 21 +: 21];
-    end
-end
-reg[29:0] player [1:0];
-always @(posedge clk) begin
-    // 将二维数组展平为一维数组
-    for (i = 0; i < 4; i = i + 1) begin
-        player_flat[i * 30 +: 30]=player[i];
+    reg [15:0] score [3:0];
+integer l;
+
+always @(*) begin
+    for (l = 0; l < 4; l = l + 1) begin
+        score_flat[l * 16 +: 16] = score[l];
     end
 end
 
-reg finish=1;
-reg [4:0] total_time = 5'b10111;
-reg [4:0] current_time = 5'b10111;
-reg [5:0] total = 6'b000101;    //赛题总数
+    integer k;
+// 在 `always` 块中将二维数组展平为一维数组：
+always @(posedge clk) begin
+    // 将二维数组展平为一维数组
+    for (k = 0; k < 50; k = k + 1) begin
+        question[k]=mode_question_flat[k * 21 +: 21];
+    end
+end
+reg[29:0] player [3:0][49:0];
+
+integer i, j;
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            // 如果有复位信号，清空player_flat和player数组
+            player_flat <= 6000'b0;  // 重置为0
+        end else begin
+            // 用两个嵌套的for循环将二维数组展开成一个6000位的信号
+            for (i = 0; i < 4; i = i + 1) begin
+                for (j = 0; j < 50; j = j + 1) begin
+                    player_flat[(i * 50 + j) * 30 +: 30] <= player[i][j]; // 展开并拼接
+                end
+            end
+        end
+    end
+
+
+reg finish=0;
+reg [4:0] total_time = 5'b11000;
+reg [4:0] current_time = 5'b11000;
+
 reg [1:0] total_player = 2'b11;   //选手总数
-reg [5:0] current = 6'b000001;    //当前赛题
-reg [1:0] current_player = 2'b0;//当前选手
+reg [5:0] current = 6'b000000;    //当前赛题
+reg [1:0] current_player = 2'b00;//当前选手
 
 parameter Num0 = 8'b1111_1100; // "0"
 parameter Num1 = 8'b0110_0000; // "1"
@@ -143,7 +164,7 @@ end
 
 always @(posedge clk ) begin
     if(mode==3'b010) begin
-            if(exit&delay_trigger) begin
+            if(current_player==total_player-1&current==total-1&submit&delay_trigger) begin
               mode_entered <=0;
             end
             if(confirm&delay_trigger) begin
@@ -159,6 +180,10 @@ always @(posedge clk ) begin
      
             if(submit&delay_trigger) begin
               finish <=0;
+              score[current_player][9:0]=score[current_player][9:0]+ player[current_player][current][29:25];
+              if(player[current_player][current][0]) begin
+                    score[current_player][15:10]=score[current_player][15:10]+1;
+                end
             end 
     end
 end
@@ -171,21 +196,21 @@ always @(posedge clk ) begin
             case(input_counter)
             2'b00:begin
                  if (change) begin
-                            player[current_player][24:17]<=in;
+                            player[current_player][current][24:17]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b01:begin
                 if (change) begin
-                            player[current_player][16:9]<=in;
+                            player[current_player][current][16:9]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b10:begin
                 if(confirm&&delay_trigger) begin
-                            player[current][29:25]<=5'b10100-current_time;
-                            player[current_player][8:1]=in;
-                            convert_binary_answer(question[current][15:8], question[current][17:16], player[current_player][24:1], player[current_player][0]);
+                            player[current_player][current][29:25]<=5'b10100-current_time;
+                            player[current_player][current][8:1]=in;
+                            convert_binary_answer(question[current][15:8], question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
                             input_counter <= 0; // 重置计数器
                         end
             end
@@ -195,21 +220,21 @@ always @(posedge clk ) begin
                     case(input_counter)
             2'b00:begin
                  if (change) begin
-                            player[current_player][24:17]<=in;
+                            player[current_player][current][24:17]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b01:begin
                 if (change) begin
-                            player[current_player][16:9]<=in;
+                            player[current_player][current][16:9]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b10:begin
                 if(confirm&&delay_trigger) begin
-                            player[current][29:25]<=5'b10100-current_time;
-                            player[current_player][8:1]=in;
-                            signed_operation(question[current][15:8], question[current][7:0],question[current][17:16], player[current_player][24:1], player[current_player][0]);
+                            player[current_player][current][29:25]<=5'b10100-current_time;
+                            player[current_player][current][8:1]=in;
+                            signed_operation(question[current][15:8], question[current][7:0],question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
                             input_counter <= 0; // 重置计数器
                         end
             end
@@ -217,22 +242,22 @@ always @(posedge clk ) begin
                 end
             5'b00100: begin
                 if(confirm&&delay_trigger) begin
-                    player[current][29:25]<=5'b10100-current_time;
-                    player[current][24:17]<=in;
+                    player[current_player][current][29:25]=5'b10100-current_time;
+                    player[current_player][current][24:17]<=in;
                     shift_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
                 end
             end
             5'b01000: begin
                 if(confirm&&delay_trigger) begin
-                    player[current][29:25]<=5'b10100-current_time;
-                player[current][24:17]<=in;
+                    player[current_player][current][29:25]=5'b10100-current_time;
+                player[current_player][current][24:17]<=in;
             bitwise_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
                 end
             end
             5'b10000: begin
                 if(confirm&&delay_trigger) begin
-                    player[current][29:25]<=5'b10100-current_time;
-                player[current][24:17]<=in;
+                    player[current_player][current][29:25]<=5'b10100-current_time;
+                player[current_player][current][24:17]<=in;
             logic_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
                 end
     end
@@ -244,11 +269,11 @@ end
 always @(posedge clk) begin
     if(mode==3'b010) begin
     if(finish&submit&delay_trigger) begin
-        if(current<total) begin
+        if(current<total-1) begin
         current<=current+1;
         end
         else begin
-        current<=1;
+        current<=6'b0;
         end
 end
     end
@@ -256,19 +281,19 @@ end
 
 always @(posedge clk) begin
     if(mode==3'b010) begin
-    if(current==total&submit&delay_trigger) begin
-        if(current_player<total_player) begin
+    if(current==total-1&submit&delay_trigger&finish&mode_entered) begin
+        if(current_player<total_player-1) begin
         current_player<=current_player+1;
         end
         else begin
-        current_player<=0;
+        current_player<=current_player;
         end
 end
     end
 end
 
 always @(posedge clk) begin
-    if(mode==3'b010&delay_trigger2) begin
+    if(mode==3'b010&delay_trigger2&mode_entered) begin
     case(finish)
     0: begin
         if(current_time>5'b0) begin
@@ -286,16 +311,18 @@ endcase
 end
 
   always @(posedge clk) begin
+    if(mode==3'b010) begin
+    if(mode_entered) begin
     if(current_time>5'b10100&~finish) begin
         if(delay_trigger) begin
             if(seg3==Blank) begin
-             seg3<=digit_to_seg1(current/10);
+             seg3<=digit_to_seg1((current+1)/10);
             end
             else begin
             seg3<=Blank;
             end
             if(seg4==Blank) begin
-             seg4<=digit_to_seg1(current%10);
+             seg4<=digit_to_seg1((current+1)%10);
             end
             else begin
             seg4<=Blank;
@@ -303,12 +330,12 @@ end
         end
     end
     else begin
-        seg3<=digit_to_seg1(current/10);
-        seg4<=digit_to_seg1(current%10);
+        seg3<=digit_to_seg1((current+1)/10);
+        seg4<=digit_to_seg1((current+1)%10);
     end
     if(current_time>5'b10100) begin
-        seg7<=digit_to_seg1(Blank);
-        seg8<=digit_to_seg1(Blank);
+        seg7<=Blank;
+        seg8<=Blank;
     end
     else begin
         seg7<=digit_to_seg1(current_time/10);
@@ -318,9 +345,23 @@ end
     seg2<=digit_to_seg1(total%10);
     seg5<=digit_to_seg1(question[current][20:18]);
     seg6<=digit_to_seg1(question[current][17:16]+1);
-    led1<=digit_to_seg1(question[current][15:8]);
-    led2<=digit_to_seg1(question[current][7:0]);
+    led1<=question[current][15:8];
+    led2<=question[current][7:0];
     end
+    else begin
+        seg1=digit_to_seg1(2);
+        seg2=Blank;
+        seg3=Blank;
+        seg4=Blank;
+        seg5=Blank;
+        seg6=Blank;
+        seg7=Blank;
+        seg8=Blank;
+        led1=Blank;
+        led2=Blank;
+    end
+  end
+  end
 
 task convert_binary;
     input [7:0] bin_value; // 输入的二进制值

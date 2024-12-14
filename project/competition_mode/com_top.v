@@ -4,6 +4,7 @@ module competition_top (
     input wire power_button,        // 电源按钮
     input confirm,                  // 进入退出模式的按钮
     input select,                   // 切换模式的按钮      
+    input change,
     input exit,
     input [7:0] in,                // 拨码开关的输入   
     output reg [7:0] Seg1,         // 前四个数码管
@@ -14,7 +15,9 @@ module competition_top (
 );
 reg mode_entered;
 wire [1049:0] mode_question_flat;
-wire [119:0] player_flat;
+wire [5999:0] player_flat;
+wire [63:0] score_flat;
+wire [5:0] total_question;
 reg [2:0] mode_sel=3'b001;              // 模式选择信号
 wire power_state;                // 电源模块的输出信号
 reg [7:0] seg1= 8'b0;    
@@ -41,8 +44,6 @@ wire [7:0] seg25;
 wire [7:0] seg26;     
 wire [7:0] seg27;             
 wire [7:0] seg28;
-wire [7:0] led21;
-wire [7:0] led22;
 wire [7:0] seg31;    
 wire [7:0] seg32;     
 wire [7:0] seg33;             
@@ -51,6 +52,10 @@ wire [7:0] seg35;
 wire [7:0] seg36;     
 wire [7:0] seg37;             
 wire [7:0] seg38;
+wire [7:0] led21;
+wire [7:0] led22;
+wire [7:0] led31;
+wire [7:0] led32;
 wire type_entered1;
 wire type_entered2;
 wire type_entered3;
@@ -79,15 +84,18 @@ set set (
     .seg7(seg17),
     .seg8(seg18),
     .mode_entered(type_entered1),
-    .mode_question_flat(mode_question_flat)
+    .mode_question_flat(mode_question_flat),
+    .total(total_question)
 );
 
 answer answer (
+    .total(total_question),
     .mode_question_flat(mode_question_flat),
     .mode(mode_sel),
     .clk(clk),                // 时钟信号
     .reset(reset),            // 复位信号
     .confirm(confirm),        // 确定操作的按钮
+    .change(change),
     .exit(exit),              // 退出按钮, 假设我们先不使用它
     .submit(select),          // 切换按钮   
     .in(in),                  // 拨码开关的输入   
@@ -103,6 +111,30 @@ answer answer (
     .led2(led22),
     .mode_entered(type_entered2),
     .player_flat(player_flat)
+);
+
+review review (
+    .mode_question_flat(mode_question_flat),
+    .player_flat(player_flat),
+    .score_flat(score_flat),
+    .mode_sel(mode_sel),
+    .clk(clk),                // 时钟信号
+    .reset(reset),            // 复位信号
+    .confirm(confirm),        // 确定操作的按钮
+    .exit(exit),              // 退出按钮, 假设我们先不使用它
+    .select(select),          // 切换按钮   
+    .in(in),                  // 拨码开关的输入   
+    .seg1(seg31),
+    .seg2(seg32),
+    .seg3(seg33),
+    .seg4(seg34),
+    .seg5(seg35),
+    .seg6(seg36),
+    .seg7(seg37),
+    .seg8(seg38),
+    .led1(led31),
+    .led2(led32),
+    .type_entered(type_entered3)
 );
 
 reg [2:0] current_digit = 0; 
@@ -165,6 +197,47 @@ parameter Num2 = 8'b1101_1010; // "2"
 parameter Num3 = 8'b1111_0010; // "3"
 parameter Num4 = 8'b0110_0110; // "4"
 
+
+
+parameter Num5 = 8'b1011_0110; // "5"
+parameter Num6 = 8'b1011_1110; // "6"
+parameter Num7 = 8'b1110_0000; // "7"
+parameter Num8 = 8'b1111_1110; // "8"
+parameter Num9 = 8'b1111_0110; // "9"
+parameter NumA = 8'b1110_1110; // "A"
+parameter Numa = 8'b0011_1110; // "A"
+parameter NumB = 8'b0011_1110; // "B"
+parameter NumC = 8'b1001_1001; // "C"
+parameter NumD = 8'b0111_1010; // "D"
+parameter NumE = 8'b1001_1110; // "E"
+parameter NumF = 8'b1000_1110; // "F"
+parameter Blank = 8'b0000_0000; // 空白
+parameter Minus= 8'b0000_0010;//"-"
+
+function [7:0] digit_to_seg1;
+    input [3:0] digit;  // 输入 4 位数字（支持 0-9 和 A-F）
+    begin
+        case (digit)
+            4'd0: digit_to_seg1 = Num0; // 显示 "0"
+            4'd1: digit_to_seg1 = Num1; // 显示 "1"
+            4'd2: digit_to_seg1 = Num2; // 显示 "2"
+            4'd3: digit_to_seg1 = Num3; // 显示 "3"
+            4'd4: digit_to_seg1 = Num4; // 显示 "4"
+            4'd5: digit_to_seg1 = Num5; // 显示 "5"
+            4'd6: digit_to_seg1 = Num6; // 显示 "6"
+            4'd7: digit_to_seg1 = Num7; // 显示 "7"
+            4'd8: digit_to_seg1 = Num8; // 显示 "8"
+            4'd9: digit_to_seg1 = Num9; // 显示 "9"
+            4'd10: digit_to_seg1 = NumA; // 显示 "A"
+            4'd11: digit_to_seg1 = NumB; // 显示 "B"
+            4'd12: digit_to_seg1 = NumC; // 显示 "C"
+            4'd13: digit_to_seg1 = NumD; // 显示 "D"
+            4'd14: digit_to_seg1 = NumE; // 显示 "E"
+            4'd15: digit_to_seg1 = NumF; // 显示 "F"
+            default: digit_to_seg1 = Blank; // 空白
+        endcase
+    end
+endfunction
 always @(posedge clk) begin
     if(mode_entered) begin
     case (mode_sel)
@@ -192,7 +265,17 @@ always @(posedge clk) begin
             led2 <= led22;
         end
         mode3: begin
-       
+    
+            seg1 <= seg31;  
+            seg2 <= seg32;  
+            seg3 <= seg33; 
+            seg4 <= seg34;  
+            seg5 <= seg35;  
+            seg6 <= seg36;  
+            seg7 <= seg37;  
+            seg8 <= seg38;    
+            led1 <= led31;
+            led2 <= led32;
         end
         default: begin
             seg1 <= 8'b0000_0000; // 默认输出
