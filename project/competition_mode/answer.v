@@ -43,20 +43,11 @@ module answer (
     output reg [7:0] led1,
     output reg [7:0] led2,
     output reg mode_entered,
-    output reg[5999:0] player_flat,
-    output reg [63:0]score_flat 
+    output reg[5999:0] player_flat
     );
     reg [20:0] question [49:0];
-    reg [15:0] score [3:0];
-integer l;
 
-always @(*) begin
-    for (l = 0; l < 4; l = l + 1) begin
-        score_flat[l * 16 +: 16] = score[l];
-    end
-end
-
-    integer k;
+integer k;
 // 在 `always` 块中将二维数组展平为一维数组：
 always @(posedge clk) begin
     // 将二维数组展平为一维数组
@@ -67,19 +58,14 @@ end
 reg[29:0] player [3:0][49:0];
 
 integer i, j;
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            // 如果有复位信号，清空player_flat和player数组
-            player_flat <= 6000'b0;  // 重置为0
-        end else begin
+    always @(posedge clk )  begin
             // 用两个嵌套的for循环将二维数组展开成一个6000位的信号
             for (i = 0; i < 4; i = i + 1) begin
                 for (j = 0; j < 50; j = j + 1) begin
-                    player_flat[(i * 50 + j) * 30 +: 30] <= player[i][j]; // 展开并拼接
+                    player_flat[(i * 50 + j) * 30 +: 30] = player[i][j]; // 展开并拼接
                 end
             end
         end
-    end
 
 
 reg finish=0;
@@ -149,7 +135,7 @@ always @(posedge clk) begin
 end
 reg [28:0] counter2 = 0; // 计数器
 reg delay_trigger2 = 0;  // 触发信号7
-localparam DELAY_COUNT2 = CLK_FREQ; // 1秒延迟的计数值
+localparam DELAY_COUNT2 = CLK_FREQ*2; // 1秒延迟的计数值
         
 always @(posedge clk) begin
     if (counter2 < DELAY_COUNT2 - 1) begin
@@ -161,9 +147,23 @@ always @(posedge clk) begin
     end
 end
 
+reg [28:0] counter3 = 0; // 计数器
+reg delay_trigger3 = 0;  // 触发信号7
+localparam DELAY_COUNT3 = CLK_FREQ; // 1秒延迟的计数值
+        
+always @(posedge clk) begin
+    if (counter3 < DELAY_COUNT3 - 1) begin
+        counter3 <= counter3 + 1;
+        delay_trigger3 <= 0;
+    end else begin
+        counter3 <= 0;
+        delay_trigger3 <= 1; // 触发信号
+    end
+end
+
 always @(posedge clk ) begin
     if(mode==3'b010) begin
-            if(current_player==total_player-1&current==total-1&submit&delay_trigger) begin
+            if(current_player==total_player&current==total-1&submit&delay_trigger) begin
               mode_entered <=0;
             end
             if(confirm&delay_trigger) begin
@@ -173,96 +173,91 @@ always @(posedge clk ) begin
 end
 always @(posedge clk ) begin
     if(mode==3'b010) begin
-            if((confirm&delay_trigger)|current_time==5'b0) begin
+            if((confirm&delay_trigger&mode_entered)|current_time==5'b0) begin
               finish <=1;
             end
      
             if(submit&delay_trigger) begin
               finish <=0;
-              score[current_player][9:0]=score[current_player][9:0]+ player[current_player][current][29:25];
-              if(player[current_player][current][0]) begin
-                    score[current_player][15:10]=score[current_player][15:10]+1;
-                end
+              
             end 
     end
 end
-reg [2:0] input_counter = 0;
+reg [1:0] input_counter = 2'b00;
 always @(posedge clk ) begin
     if(mode==3'b010) begin
-    if(~finish) begin
-        case (mode) //五种运算类型分别操作
-           5'b00001: begin
+        case (question[current][20:18]) //五种运算类型分别操作
+           3'b001: begin
             case(input_counter)
             2'b00:begin
-                 if (change) begin
+                 if (change&delay_trigger) begin
                             player[current_player][current][24:17]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b01:begin
-                if (change) begin
+                if (change&delay_trigger) begin
                             player[current_player][current][16:9]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b10:begin
-                if(confirm&&delay_trigger) begin
+                if(confirm&delay_trigger) begin
                             player[current_player][current][29:25]<=5'b10100-current_time;
                             player[current_player][current][8:1]=in;
-                            convert_binary_answer(question[current][15:8], question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
-                            input_counter <= 0; // 重置计数器
+                            convert_binary(question[current][15:8], question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
+                            input_counter <= 2'b00; // 重置计数器
                         end
             end
            endcase
                 end
-            5'b00010: begin
+            3'b010: begin
                     case(input_counter)
             2'b00:begin
-                 if (change) begin
+                 if (change&delay_trigger) begin
                             player[current_player][current][24:17]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b01:begin
-                if (change) begin
+                if (change&delay_trigger) begin
                             player[current_player][current][16:9]<=in;
                             input_counter <= input_counter + 1; // 计数加一
                         end
             end
             2'b10:begin
-                if(confirm&&delay_trigger) begin
-                            player[current_player][current][29:25]<=5'b10100-current_time;
-                            player[current_player][current][8:1]=in;
-                            signed_operation(question[current][15:8], question[current][7:0],question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
-                            input_counter <= 0; // 重置计数器
-                        end
+                if(confirm&delay_trigger) begin
+                    player[current_player][current][29:25]<=5'b10100-current_time;
+                    player[current_player][current][8:1]=in;
+                    signed_operation(question[current][15:8], question[current][7:0],question[current][17:16], player[current_player][current][24:1], player[current_player][current][0]);
+                    input_counter <= 0; // 重置计数器
+                end
             end
            endcase
                 end
-            5'b00100: begin
+            3'b011: begin
                 if(confirm&&delay_trigger) begin
                     player[current_player][current][29:25]=5'b10100-current_time;
-                    player[current_player][current][24:17]<=in;
-                    shift_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
+                    player[current_player][current][24:17]=in;
+                    shift_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][current][0]);
                 end
             end
-            5'b01000: begin
-                if(confirm&&delay_trigger) begin
-                    player[current_player][current][29:25]=5'b10100-current_time;
-                player[current_player][current][24:17]<=in;
-            bitwise_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
-                end
-            end
-            5'b10000: begin
+            3'b100: begin
                 if(confirm&&delay_trigger) begin
                     player[current_player][current][29:25]<=5'b10100-current_time;
                 player[current_player][current][24:17]<=in;
-            logic_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][0]);
+            bitwise_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][current][0]);
+                end
+            end
+            3'b101: begin
+                if(confirm&&delay_trigger) begin
+                    player[current_player][current][29:25]<=5'b10100-current_time;
+                player[current_player][current][24:17]<=in;
+            logic_operation(question[current][15:8],question[current][7:0],question[current][17:16],in,player[current_player][current][0]);
                 end
     end
     endcase
     end
-end
 end
 
 always @(posedge clk) begin
@@ -272,7 +267,7 @@ always @(posedge clk) begin
         current<=current+1;
         end
         else begin
-        current<=6'b0;
+        current<=6'b000000;
         end
 end
     end
@@ -281,7 +276,7 @@ end
 always @(posedge clk) begin
     if(mode==3'b010) begin
     if(current==total-1&submit&delay_trigger&finish&mode_entered) begin
-        if(current_player<total_player-1) begin
+        if(current_player<total_player) begin
         current_player<=current_player+1;
         end
         else begin
@@ -313,7 +308,12 @@ end
     if(mode==3'b010) begin
     if(mode_entered) begin
     if(current_time>5'b10100&~finish) begin
-        if(delay_trigger) begin
+        if(current_time==5'b11000) begin
+            seg3<=digit_to_seg1((current+1)/10);
+            seg4<=digit_to_seg1((current+1)%10);
+        end
+        else begin
+        if(delay_trigger3) begin
             if(seg3==Blank) begin
              seg3<=digit_to_seg1((current+1)/10);
             end
@@ -327,10 +327,17 @@ end
             seg4<=Blank;
             end
         end
+        end
+    end
+    else begin
+        if(question[current][20:18]==3'b001|question[current][20:18]==3'b010) begin
+    seg3<=digit_to_seg1(input_counter+1);
+    seg4<=digit_to_seg1(input_counter+1);
     end
     else begin
         seg3<=digit_to_seg1((current+1)/10);
         seg4<=digit_to_seg1((current+1)%10);
+    end
     end
     if(current_time>5'b10100) begin
         seg7<=Blank;
@@ -418,43 +425,51 @@ endtask
 
 
 task signed_operation;
-    input [7:0] a; // 输入的二进制值
+    input [7:0] a;        // 输入的二进制值
     input [7:0] b;
     input [1:0] op;
     input [23:0] answer;
     output check;
+    
     reg [23:0] r;
-    reg [7:0] result;   // 修改结果为 9 位签名数
-    reg [7:0] abs_result; 
-    reg sign;                    // sign是符号位
-    reg [3:0] hundreds, tens, ones; // 改为 4 位以处理数字
+    reg signed [7:0] result;  // 修改为 signed 类型，8 位带符号数
+    reg [7:0] abs_result;     // 用 8 位来存储绝对值
+    reg sign;                 // sign 是符号位
+    reg [3:0] hundreds, tens, ones; // 4 位以处理百位、十位、个位
 
     begin
-    abs_result = 8'b0;
-    // 计算结果
-    case(op)
-        2'b00: begin
-            result = a + b; // 加法
-            sign = result[7]; // 获取符号位
-            abs_result[6:0] = (sign) ? ~result[6:0] : result[6:0]; // 计算绝对值，注意 abs_result 范围
-        end
-        2'b01: begin
-            result = a - b; // 减法
-            sign = result[7]; // 获取符号位
-            abs_result[6:0] = (sign) ? ~result[6:0] : result[6:0]; // 计算绝对值，注意 abs_result 范围
-        end
-        default: result = 8'b00000000; // 默认情况
-    endcase
-    hundreds = abs_result / 100;        // 百位
-    tens = (abs_result / 10) % 10;      // 十位
-    ones = abs_result % 10;              // 个位
+        // 计算结果
+        case(op)
+            2'b00: begin
+                result = a + b;  // 加法
+            end
+            2'b01: begin
+                result = a - b;  // 减法
+            end
+            default: result = 8'b00000000;  // 默认情况
+        endcase
 
-    r[23]=sign;
-    r[19:16]= hundreds;
-    r[11:8]=tens;
-    r[3:0]=ones;
-    check = (r==answer);
+        sign = result[7];  // 获取符号位
 
+        // 计算绝对值，负数时取补码
+        if (sign == 1'b1) 
+            abs_result = ~result + 1;  // 负数，取补码
+        else
+            abs_result = result;      // 正数，直接赋值
+
+        // 计算百位、十位、个位
+        hundreds = abs_result / 100;        // 百位
+        tens = (abs_result / 10) % 10;      // 十位
+        ones = abs_result % 10;             // 个位
+
+        // 拼接成最终的24位数
+        r[23] = sign;  // 符号位
+        r[19:16] = hundreds;  // 百位
+        r[11:8] = tens;       // 十位
+        r[3:0] = ones;        // 个位
+
+        // 比较计算结果与期望的答案
+        check = (r == answer);
     end
 endtask
 
