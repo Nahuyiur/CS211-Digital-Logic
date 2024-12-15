@@ -1,5 +1,3 @@
-
-
 module review(
     input wire [1049:0] mode_question_flat,
     input wire [5999:0] player_flat,
@@ -11,6 +9,7 @@ module review(
     input select,             // 切换按钮   
     input [7:0] in,           // 拨码开关的输入   
     input total_player,
+    input select_answer,
     output reg type_entered,
     output reg[7:0] seg1,      
     output reg[7:0] seg2,   
@@ -44,16 +43,14 @@ integer i, j;
         end
     end
 
-<<<<<<< HEAD
 
 
     
-=======
->>>>>>> 9d2fc2fb7db8a176a5301c2b977e0bb9309c4314
 reg [2:0] mode = 3'b001;        // 模式选择的储存
 reg [1:0] store = 2'b00;           // 存储状态,00为未操作，01为存储a,10为存储b,11为输出结果
 reg [1:0] player = 2'b0;               // 运算数 a
 reg [5:0] question = 6'b0;               // 运算数 b
+reg select_answer_entered = 1'b0;
 
 //下面两行的计数器用来控制按下按钮的时间
 localparam CLK_FREQ = 50000000; // 假设时钟频率为 50MHz
@@ -165,6 +162,14 @@ always @(posedge clk) begin
             3'b010: mode <= 3'b100;
             3'b100: mode <= 3'b001;
         endcase
+    end
+    end
+end
+
+always @(posedge clk) begin
+    if(mode_sel==3'b100) begin
+    if (select_answer&delay_trigger) begin
+        select_answer_entered <= ~select_answer_entered;
     end
     end
 end
@@ -294,8 +299,30 @@ always @(posedge clk) begin//控制leds和seg的输出
             seg6 <= Blank;
             seg7 <= Blank;
             seg8 <= Blank;
-            led1 <= q[(question-1)][15:8];
+
+            if(select_answer_entered)begin//查看正确答案
+                 case(q[question-1][20:18])
+                3'b001:begin
+                convert_binary(q[question-1][17:16],q[(question-1)][15:8],led1,led2 );
+                 end
+                 3'b010:begin
+                signed_operation(q[question-1][17:16],q[(question-1)][15:8],q[(question-1)][7:0],led1,led2 );
+                 end
+                 3'b001:begin
+                shift_operation(q[question-1][17:16],q[(question-1)][15:8],q[(question-1)][7:0],led1,led2 );
+                 end
+                 3'b001:begin
+                bitwise_operation(q[question-1][17:16],q[(question-1)][15:8],q[(question-1)][7:0],led1,led2 );
+                 end
+                 3'b001:begin
+                logic_operation(q[question-1][17:16],q[(question-1)][15:8],q[(question-1)][7:0],led1,led2 );
+                 end
+          endcase
+         end
+         else begin
+             led1 <= q[(question-1)][15:8];
             led2 <= q[(question-1)][7:0];
+         end
         end
         3'b100: begin
             seg1 <= digit_to_seg1(player);
@@ -315,6 +342,191 @@ always @(posedge clk) begin//控制leds和seg的输出
         end
     endcase
 end
+
+
+
+
+
+task convert_binary;
+        input [1:0] op;
+        input  [7:0] bin_value;
+        output reg [7:0] answer1;
+        output reg [7:0] answer2;
+
+
+    reg [3:0] octal_hundreds_out; // 八进制百位输出
+    reg [3:0] octal_tens_out;     // 八进制十位输出
+    reg [3:0] octal_ones_out;     // 八进制个位输出
+    
+    reg [3:0] decimal_hundreds_out; // 十进制百位输出
+    reg [3:0] decimal_tens_out;     // 十进制十位输出
+    reg [3:0] decimal_ones_out;     // 十进制个位输出
+
+    reg [3:0] hex_high_out;         // 十六进制高位输出
+    reg [3:0] hex_low_out;          // 十六进制低位输出
+
+    begin
+    
+     // 八进制转换逻辑
+        octal_hundreds_out = bin_value / 64;
+        octal_tens_out     = (bin_value / 8) % 8;
+        octal_ones_out     = bin_value % 8;
+
+        // 十进制转换逻辑
+        decimal_hundreds_out = bin_value / 100;
+        decimal_tens_out     = (bin_value / 10) % 10;
+        decimal_ones_out     = bin_value % 10;
+
+        // 十六进制转换逻辑
+        hex_high_out = bin_value[7:4];
+        hex_low_out  = bin_value[3:0];
+
+    case(op)
+        2'b00: begin
+            answer1[7:4]= octal_hundreds_out;
+            answer1[3:0]=octal_tens_out;
+           answer2[7:4] = octal_ones_out;
+           answer2[3:0] = 4'b0;
+        end
+        2'b01: begin
+            answer1[7:4]= decimal_hundreds_out;
+            answer1[3:0]=decimal_tens_out;
+            answer2[7:4] = decimal_ones_out;
+            answer2[3:0] = 4'b0;
+        end
+        2'b10: begin
+            answer1[7:4]=  hex_high_out;
+            answer1[3:0]= hex_low_out;
+            answer2[7:4] = 4'b0;
+            answer2[3:0] = 4'b0;
+        end
+       
+    endcase
+    
+    end
+endtask
+
+
+task signed_operation;
+    input [1:0] op;
+    input [7:0] a;        // 输入的二进制值
+    input [7:0] b;
+    
+    output reg [7:0] answer1;
+    output reg [7:0] answer2;
+    
+    reg [23:0] r;
+    reg signed [7:0] result;  // 修改为 signed 类型，8 位带符号数
+    reg [7:0] abs_result;     // 用 8 位来存储绝对值
+    reg sign;                 // sign 是符号位
+    reg [3:0] hundreds, tens, ones; // 4 位以处理百位、十位、个位
+
+    begin
+        // 计算结果
+        case(op)
+            2'b00: begin
+                result = a + b;  // 加法
+            end
+            2'b01: begin
+                result = a - b;  // 减法
+            end
+            default: result = 8'b00000000;  // 默认情况
+        endcase
+
+        sign = result[7];  // 获取符号位
+
+        // 计算绝对值，负数时取补码
+        if (sign == 1'b1) 
+            abs_result = ~result + 1;  // 负数，取补码
+        else
+            abs_result = result;      // 正数，直接赋值
+
+        // 计算百位、十位、个位
+        hundreds = abs_result / 100;        // 百位
+        tens = (abs_result / 10) % 10;      // 十位
+        ones = abs_result % 10;             // 个位
+
+        // 拼接成最终的24位数
+        answer1[7] = sign;  // 符号位
+        answer1[3:0] = hundreds;  // 百位
+        answer2[7:4] = tens;       // 十位
+        answer2[3:0] = ones;        // 个位
+
+       
+    end
+endtask
+
+task shift_operation;
+   input [1:0] op; 
+    input signed [7:0] a;    // 输入的 8 位有符号数（算术移位用）
+    input [7:0] b;           // 输入的无符号数，表示移位的位数（范围 0~7）
+       
+  
+    output reg [7:0] answer1;
+    output reg [7:0] answer2;
+
+
+    reg [7:0] result;
+begin
+    // 根据操作代码进行相应的位移操作
+    case(op)
+        2'b00: result = a <<< b;  // 算术左移
+        2'b01: result = a >>> b;  // 算术右移
+        2'b10: result = a << b;   // 逻辑左移
+        2'b11: result = a >> b;   // 逻辑右移
+        default: result = 8'b00000000; // 默认值
+    endcase
+    answer1 = result;
+    answer2 = 8'b0;
+end
+ 
+endtask
+
+task bitwise_operation;
+    input [1:0] operation;
+    input [7:0] op_a;     // 任务输入a
+    input [7:0] op_b;     // 任务输入b
+    
+   
+    output reg [7:0] answer1;
+    output reg [7:0] answer2;
+    reg [7:0] result;
+
+    begin
+        case (operation)
+            2'b00: result = op_a & op_b;  // 与操作
+            2'b01: result = op_a | op_b;  // 或操作
+            2'b10: result = ~op_a;         // 非操作
+            2'b11: result = op_a ^ op_b;  // 异或操作
+            default: result = 8'b0;          // 默认情况
+        endcase
+        answer1 =result;
+        answer2= 8'b0;
+    end
+endtask
+
+
+task logic_operation;
+    input [1:0] operation;
+    input [7:0] op_a;       // 任务输入a
+    input [7:0] op_b;       // 任务输入b
+    
+    output reg [7:0] answer1;
+    output reg [7:0] answer2;
+    reg [7:0] result;
+
+    begin
+        case (operation)
+            2'b00: result = {8{(op_a != 0) && (op_b != 0)}}; // 逻辑与操作
+            2'b01: result = {8{(op_a != 0) || (op_b != 0)}}; // 逻辑或操作
+            2'b10: result = {8{!(op_a != 0)}};               // 逻辑非操作
+            2'b11: result = {8{(op_a != 0) ^ (op_b != 0)}}; // 逻辑异或操作
+            default: result = 8'b0;                          // 默认情况
+        endcase
+      answer1 =result;
+      answer2= 8'b0;
+    end
+endtask
 
 
 

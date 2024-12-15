@@ -14,9 +14,10 @@ module competition_top (
     output reg [7:0] anode         // 数码管使能信号（动态扫描）
 );
 reg mode_entered;
-reg [7:0] total_player;
+wire [7:0] total_player;
 wire [1049:0] mode_question_flat;
 wire [5999:0] player_flat;
+wire [63:0] score_flat;
 wire [5:0] total_question;
 reg [2:0] mode_sel=3'b001;              // 模式选择信号
 wire power_state;                // 电源模块的输出信号
@@ -88,8 +89,9 @@ set set (
     .total(total_question),
     .total_player(total_player)
 );
+
 answer answer (
-    .total_player(total_player)
+    .total_player(total_player),
     .total(total_question),
     .mode_question_flat(mode_question_flat),
     .mode(mode_sel),
@@ -115,6 +117,7 @@ answer answer (
 );
 
 review review (
+    .select_answer(change),
     .mode_question_flat(mode_question_flat),
     .player_flat(player_flat),
     .mode_sel(mode_sel),
@@ -136,6 +139,7 @@ review review (
     .led2(led32),
     .type_entered(type_entered3)
 );
+
 reg [2:0] current_digit = 0; 
 reg [20:0] counter1 = 0;   
 always @(posedge clk) begin//这个always服务于task：scan-display
