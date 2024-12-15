@@ -38,9 +38,11 @@ module set(
     output reg [7:0] seg8,
     output reg [5:0] total=6'b000000,
     output reg mode_entered,
+    output reg [7:0] total_player,
     output reg [1049:0] mode_question_flat // 用于输出展平后的数组
 );
 reg [20:0] mode_question [49:0];
+
 integer i;
 
 // 在 `always` 块中将二维数组展平为一维数组：
@@ -55,17 +57,17 @@ reg [3:0] op = 4'b0001;
   //赛题总数
 
  // 模式1:前5位是模式，两位（00表示进制选择(00 b 01 o 10 h)，后八位输入的数据，最后八位全是零
-                                //  模式2：前5位是模式，两位表示运算符选择（00 +  11 -），后十六位是ab
-                                //  模式3：前5位是模式，两位表示运算选择，01，10，11 分别对应1234），后十六位是ab
-                                //  模式4：前5位是模式，两位表示运算选择（00，01，10，11 分别对应1234），后十六位是ab
-                                // 模式 5：前5位是模式，两位表示运算选择（00，01，10，11 分别对应1234），后十六位是ab 
+//  模式2：前5位是模式，两位表示运算符选择（00 +  11 -），后十六位是ab
+//  模式3：前5位是模式，两位表示运算选择，01，10，11 分别对应1234），后十六位是ab
+//  模式4：前5位是模式，两位表示运算选择（00，01，10，11 分别对应1234），后十六位是ab
+// 模式 5：前5位是模式，两位表示运算选择（00，01，10，11 分别对应1234），后十六位是ab 
 
 
 
 reg [2:0] store = 3'b0; 
 reg [2:0] current_digit = 0; 
 reg [20:0] counter1 = 0; 
-reg [4:0] mode = 5'b00001; 
+reg [4:0] mode = 5'b00001; //11111
 
 
 
@@ -127,7 +129,8 @@ always @(posedge clk) begin
             5'b00010: mode <= 5'b00100;
             5'b00100: mode <= 5'b01000;
             5'b01000: mode <= 5'b10000;
-            5'b10000: mode <= 5'b00001;
+            5'b10000: mode <= 5'b11111;
+            5'b11111: mode <= 5'b00001;
         endcase
     end
     end
@@ -176,7 +179,7 @@ always @(posedge clk) begin
             store <=3'b001;
         end   
             3'b001: begin
-                if(mode==5'b00001)begin
+                if(mode==5'b00001 || mode==5'b11111 )begin
                 store <=3'b000;
 
             end
@@ -210,6 +213,7 @@ always @(posedge clk) begin
                 5'b00100: seg1 <= 8'b1111_0010; 
                 5'b01000: seg1 <= 8'b0110_0110; 
                 5'b10000: seg1 <= 8'b1011_0110; 
+                5'b11111: seg1 <= 8'b1011_1110;
                 default: seg1 <= 8'b0000_0000; // 默认值以防未定义操作
         endcase
    
@@ -226,20 +230,67 @@ always @(posedge clk) begin
         seg7<=8'b0;
         seg8<=8'b0;
        
-      
-        case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+        case (mode)//同时让seg1不要关闭
+                5'b00001: begin
+                    case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
                 4'b0001: seg2 <= 8'b0110_0000; 
                 4'b0010: seg2 <= 8'b1101_1010; 
                 4'b0100: seg2 <= 8'b1111_0010; 
                 4'b1000: seg2 <= 8'b0110_0110; 
                 default: seg2 <= 8'b0000_0000; 
             endcase
-        case (mode)//同时让seg1不要关闭
-                5'b00001: seg1 <= 8'b0110_0000; 
-                5'b00010: seg1 <= 8'b1101_1010; 
-                5'b00100: seg1 <= 8'b1111_0010; 
-                5'b01000: seg1 <= 8'b0110_0110; 
-                5'b10000: seg1 <= 8'b1011_0110; 
+
+
+
+                seg1 <= 8'b0110_0000;
+                end 
+                5'b00010: begin
+                    case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+                4'b0001: seg2 <= 8'b0110_0000; 
+                4'b0010: seg2 <= 8'b1101_1010; 
+                4'b0100: seg2 <= 8'b1111_0010; 
+                4'b1000: seg2 <= 8'b0110_0110; 
+                default: seg2 <= 8'b0000_0000; 
+            endcase
+                    seg1 <= 8'b1101_1010;
+                end 
+                5'b00100:begin
+                    case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+                4'b0001: seg2 <= 8'b0110_0000; 
+                4'b0010: seg2 <= 8'b1101_1010; 
+                4'b0100: seg2 <= 8'b1111_0010; 
+                4'b1000: seg2 <= 8'b0110_0110; 
+                default: seg2 <= 8'b0000_0000; 
+            endcase
+                     seg1 <= 8'b1111_0010; 
+                     end
+                5'b01000:begin 
+                    case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+                4'b0001: seg2 <= 8'b0110_0000; 
+                4'b0010: seg2 <= 8'b1101_1010; 
+                4'b0100: seg2 <= 8'b1111_0010; 
+                4'b1000: seg2 <= 8'b0110_0110; 
+                default: seg2 <= 8'b0000_0000; 
+            endcase
+                    seg1 <= 8'b0110_0110;
+                     end
+                5'b10000: begin 
+                    case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+                4'b0001: seg2 <= 8'b0110_0000; 
+                4'b0010: seg2 <= 8'b1101_1010; 
+                4'b0100: seg2 <= 8'b1111_0010; 
+                4'b1000: seg2 <= 8'b0110_0110; 
+                default: seg2 <= 8'b0000_0000; 
+            endcase
+                    seg1 <= 8'b1011_0110; 
+
+                end
+                5'b11111:begin 
+                    seg1 <= 8'b10111110; 
+                    seg2 <= 8'b11101100;
+                    total_player <= in;
+                   
+                end
                 default: seg1 <= 8'b0000_0000;
         endcase
         seg3 <=8'b0;
@@ -247,11 +298,15 @@ always @(posedge clk) begin
       
     end
     3'b001: begin
-
-        seg3 <= 8'b00111010;//这个数码管输出是a，提示输入a
-        seg4 <= 8'b0;//b此时不出现
-        if(confirm&&delay_trigger) begin
-        case (mode)
+        if(mode == 5'b11111 )begin
+            seg3 <= digit_to_seg2(total_player) ;
+        end
+       
+       else begin
+            seg3 <= 8'b00111010;//这个数码管输出是a，提示输入a
+            seg4 <= 8'b0;//b此时不出现
+       if(confirm&&delay_trigger) begin
+       case (mode)
                 5'b00001:begin
             case (op)
                 4'b0001: begin
@@ -268,7 +323,7 @@ always @(posedge clk) begin
                 end
                 default: seg2 <= 8'b0000_0000; 
             endcase
-                seg1 <= 8'b0110_0000; 
+                seg1 <= 8'b0110_0000;
                  mode_question[total][20:18] <= 3'b001;
                  mode_question[total][15:8]  <= in;
                  mode_question[total][7:0]  <= 8'b00000000;
@@ -377,12 +432,13 @@ always @(posedge clk) begin
             end
         endcase
 end
+       end
     end
     3'b010: begin
 
         seg3 <= 8'b00111010;
         seg4 <= 8'b00111110;
-if(confirm&&delay_trigger) begin
+    if(confirm&&delay_trigger) begin
          case (mode)
                 5'b00010:begin
             case (op)
@@ -416,7 +472,7 @@ if(confirm&&delay_trigger) begin
             end
                 default: seg2 <= 8'b0000_0000; 
             endcase
-                seg1 <= 8'b1111_0010; 
+                 seg1 <= 8'b1111_0010; 
                  mode_question[total][7:0]  <= in;
                  total <= total + 1'b1;
             end
@@ -516,6 +572,20 @@ function [7:0] digit_to_seg1;
             4'd14: digit_to_seg1 = NumE; // 显示 "E"
             4'd15: digit_to_seg1 = NumF; // 显示 "F"
             default: digit_to_seg1 = 8'b11111111; // 空白
+        endcase
+    end
+endfunction
+function [7:0] digit_to_seg2;
+    input [7:0] digit;  // 输入 4 位数字（支持 0-9 和 A-F）
+    begin
+        case (digit)
+            8'd0: digit_to_seg2 = Num0; // 显示 "0"
+            8'd1: digit_to_seg2 = Num1; // 显示 "1"
+            8'd2: digit_to_seg2 = Num2; // 显示 "2"
+            8'd3: digit_to_seg2 = Num3; // 显示 "3"
+            8'd4: digit_to_seg2 = Num4; // 显示 "4"
+            
+            default: digit_to_seg2 = 8'b11111111; // 空白
         endcase
     end
 endfunction

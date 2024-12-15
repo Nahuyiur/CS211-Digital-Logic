@@ -31,6 +31,7 @@ module answer (
     input change,
     input [7:0] in,
     input [1049:0] mode_question_flat,
+    input [7:0] total_player,
     output reg [7:0] seg1,
     output reg [7:0] seg2,
     output reg [7:0] seg3,
@@ -84,8 +85,7 @@ integer i, j;
 reg finish=0;
 reg [4:0] total_time = 5'b11000;
 reg [4:0] current_time = 5'b11000;
-
-reg [1:0] total_player = 2'b11;   //选手总数
+   //选手总数
 reg [5:0] current = 6'b000000;    //当前赛题
 reg [1:0] current_player = 2'b00;//当前选手
 

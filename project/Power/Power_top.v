@@ -14,7 +14,7 @@ module Power_top (
 );
 
 reg mode_entered=0;
-reg [3:0] mode_sel=4'b0001;              // 模式选择信号
+reg [3:0] mode_sel=4'b0001;      // 模式选择信号
 wire power_state;                // 电源模块的输出信号
 reg [7:0] seg1= 8'b0;    
 reg [7:0] seg2= 8'b0;     
@@ -53,6 +53,7 @@ wire [7:0] leds2;
 wire type_entered1;
 wire type_entered2;
 wire type_entered3;
+
 // Counter和触发器相关的信号
 reg [31:0] counter;              // 用于按钮按下的计数
 reg delay_trigger;               // 触发信号
@@ -209,8 +210,7 @@ always @(posedge clk) begin
             seg8 <= seg28;    
         end
         mode3: begin
-            // 处理mode3的情况
-            seg1 <= 8'b1111_1111; // 示例输出
+        seg1 <= 8'b1111_1111; // 示例输出
         end
         mode4: begin
             seg1 <= seg31;  

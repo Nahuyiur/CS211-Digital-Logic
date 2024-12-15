@@ -14,6 +14,7 @@ module competition_top (
     output reg [7:0] anode         // 数码管使能信号（动态扫描）
 );
 reg mode_entered;
+reg [7:0] total_player;
 wire [1049:0] mode_question_flat;
 wire [5999:0] player_flat;
 wire [63:0] score_flat;
@@ -85,10 +86,12 @@ set set (
     .seg8(seg18),
     .mode_entered(type_entered1),
     .mode_question_flat(mode_question_flat),
-    .total(total_question)
+    .total(total_question),
+    .total_player(total_player)
 );
 
 answer answer (
+    .total_player(total_player)
     .total(total_question),
     .mode_question_flat(mode_question_flat),
     .mode(mode_sel),
@@ -239,6 +242,8 @@ function [7:0] digit_to_seg1;
     end
 endfunction
 always @(posedge clk) begin
+
+    
     if(mode_entered) begin
     case (mode_sel)
         mode1: begin

@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+
 
 module review(
     input wire [1049:0] mode_question_flat,
@@ -23,6 +23,8 @@ module review(
     output reg [7:0] led1,   // LED显示
     output reg [7:0] led2
 );
+
+
 reg[29:0] p [3:0][49:0];
 reg [20:0] q [49:0];
 reg [15:0] score [3:0];
@@ -46,6 +48,10 @@ integer i, j;
             score[i] = score_flat[i * 16 +: 16];
         end
     end
+
+
+
+    
 reg [2:0] mode = 3'b001;        // 模式选择的储存
 reg [1:0] store = 2'b0;           // 存储状态,00为未操作，01为存储a,10为存储b,11为输出结果
 reg [1:0] player = 2'b0;               // 运算数 a
