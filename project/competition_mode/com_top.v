@@ -89,7 +89,6 @@ set set (
     .total(total_question),
     .total_player(total_player)
 );
-
 answer answer (
     .total_player(total_player)
     .total(total_question),
@@ -139,7 +138,6 @@ review review (
     .led2(led32),
     .type_entered(type_entered3)
 );
-
 reg [2:0] current_digit = 0; 
 reg [20:0] counter1 = 0;   
 always @(posedge clk) begin//这个always服务于task：scan-display

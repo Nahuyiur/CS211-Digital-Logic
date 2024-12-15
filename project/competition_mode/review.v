@@ -113,7 +113,6 @@ function [7:0] digit_to_seg1;
         endcase
     end
 endfunction
-
 //这个function和上一个function的区别是没有10-15，不会出现十六进制的转换（比如10不会被转成A）
 function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
     input [3:0] digit;        // 输入 4 位数字（支持 0-9 和 A-F）

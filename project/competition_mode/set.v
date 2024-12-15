@@ -297,7 +297,8 @@ always @(posedge clk) begin
         seg4 <=8'b0;
       
     end
-    3'b001: begin
+    
+    3'b001: begin   
         if(mode == 5'b11111 )begin
             seg3 <= digit_to_seg2(total_player) ;
         end

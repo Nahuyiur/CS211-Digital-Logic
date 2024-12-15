@@ -133,7 +133,6 @@ function [7:0] digit_to_seg1;
         endcase
     end
 endfunction
-
 reg [24:0] counter = 0; // 计数器
 reg delay_trigger = 0;  // 触发信号
 localparam CLK_FREQ = 50000000; // 假设时钟频率为 50MHz
