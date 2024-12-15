@@ -33,8 +33,6 @@ integer i, j;
         for (i = 0; i < 4; i = i + 1) begin
             for (j = 0; j < 50; j = j + 1) begin
                 p[i][j] = player_flat[(i * 50 + j) * 30 +: 30];
-                score[i][15:10] = score[i][15:10]+p[i][j][0];
-                score[i][9:0] = score[i][9:0]+p[i][j][29:25];
             end
         end
 
@@ -43,6 +41,7 @@ integer i, j;
             q[i] = mode_question_flat[i * 21 +: 21];
         end
     end
+
 reg [2:0] mode = 3'b001;        // 模式选择的储存
 reg [1:0] store = 2'b00;           // 存储状态,00为未操作，01为存储a,10为存储b,11为输出结果
 reg [1:0] player = 2'b0;               // 运算数 a
@@ -257,6 +256,17 @@ always @(posedge clk) begin//控制leds和seg的输出
         question<=in;
     end
     Step4: begin
+        for (i = 0; i < 4; i = i + 1) begin
+            score[i][15:10] = 0;  // 清零
+            score[i][9:0] = 0;    // 清零
+            // 对应 50 个元素的加法
+            for (j = 0; j < 50; j = j + 1) begin
+                // 累加p[i][j][29:25]部分，放入 score[i][15:10]
+                score[i][15:10] = score[i][15:10] + p[i][j][0];
+                // 累加p[i][j][0]部分，放入 score[i][9:0]
+                score[i][9:0] = score[i][9:0] + p[i][j][29:25];
+            end
+    end
         case(mode)
         3'b001: begin
             seg1 <= digit_to_seg1(player);
