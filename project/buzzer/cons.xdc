@@ -1,10 +1,10 @@
 set_property CLOCK DEDICATED ROUTE FALSE [get_nets {clk  IBUF}]
 set_property -dict {PACKAGE_PIN P17 IOSTANDARD LVCMOS33} [get_ports clk]
 
-set_property PACKAGE_PIN B16 [get_ports pwm_out]
+set_property PACKAGE_PIN T1 [get_ports pwm_out]
 set_property IOSTANDARD LVCMOS33 [get_ports pwm_out]
 
-set_property IOSTANDARD LVCMOS33 [get_ports dip_switch]
+set_property IOSTANDARD LVCMOS33 [get_ports {dip_switch[*]}]
 set_property -dict {PACKAGE_PIN U3 IOSTANDARD LVCMOS33} [get_ports {dip_switch[0]}]
 set_property -dict {PACKAGE_PIN U2 IOSTANDARD LVCMOS33} [get_ports {dip_switch[1]}]
 set_property -dict {PACKAGE_PIN V2 IOSTANDARD LVCMOS33} [get_ports {dip_switch[2]}]
