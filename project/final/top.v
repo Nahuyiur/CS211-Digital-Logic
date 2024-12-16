@@ -335,7 +335,7 @@ parameter mode2 = 4'b0010;
 parameter mode3 = 4'b0100;
 parameter mode4 = 4'b1000;
 
-
+parameter Blank=8'b0000_0000;
 always @(posedge clk) begin
     // 切换模式
     if (!mode_entered && delay_trigger&current_state==STATE_STANDBY) begin
@@ -408,8 +408,8 @@ always @(posedge clk) begin
             led1 <= leds41;
         end
         default: begin
-            seg1 <= 8'b0000_0000; // 默认输出
-            seg2 <= 8'b0000_0000; // 默认输出
+            seg1 <= Blank; // 默认输出
+            seg2 <= Blank; // 默认输出
         end
     endcase
     end
@@ -430,19 +430,19 @@ always @(posedge clk) begin
             seg1=Num4;
         end
         default: begin
-            seg1 <= 8'b0000_0000;      
+            seg1 <= Blank;      
         end
     endcase
         end
         else begin
-            seg1 <= 8'b0000_0000;
-            seg2 <= 8'b0000_0000;
-            seg3 <= 8'b0000_0000;
-            seg4 <= 8'b0000_0000;
-            seg5 <= 8'b0000_0000;
-            seg6 <= 8'b0000_0000;
-            seg7 <= 8'b0000_0000;
-            seg8 <= 8'b0000_0000;
+            seg1 <= Blank;
+            seg2 <= Blank;
+            seg3 <= Blank;
+            seg4 <= Blank;
+            seg5 <= Blank;
+            seg6 <= Blank;
+            seg7 <= Blank;
+            seg8 <= Blank;
         end
     end
     display_scan(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
@@ -474,8 +474,8 @@ input [7:0] data1;
                 3'd6: s2 = data7; 
                 3'd7: s2 = data8;
                 default: begin
-                    s1 = 8'b1111_1111;      // 默认不显示内容
-                    s2 = 8'b1111_1111;
+                    s1 = Blank;      // 默认不显示内容
+                    s2 = Blank;
                 end // 默认不显示任何内容
             endcase
         end
