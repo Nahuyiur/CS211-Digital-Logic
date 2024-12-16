@@ -26,7 +26,11 @@ module study_top(
    reg[4:0] data_mode_state  = 5'b00001;//这个用于学情显示下的模式，并不代表真正的模式
   
    reg [7:0] user_input_mode1 [7:0]; //存储模式1下用户输入的八个数据
+<<<<<<< HEAD
    reg [7:0] user_input_mode2 [3:0] ; //存储模式2下用户输入的四个数据
+=======
+   reg [7:0] user_input_mode2 ; //存储模式2下用户输入的四个数据
+>>>>>>> dcd3df4c8cc23d7c64197c05bd230f1f12a4ef28
    reg [7:0] user_input_mode3 = 8'b0; 
    reg [7:0] user_input_mode4 = 8'b0;
    reg [7:0] user_input_mode5 = 8'b0;   
@@ -736,7 +740,11 @@ end
     endcase
 end
     Step6: begin
+<<<<<<< HEAD
           correct<=2'b00;
+=======
+    correct<=2'b00;
+>>>>>>> dcd3df4c8cc23d7c64197c05bd230f1f12a4ef28
           case (answer_result)
         1'b0 : 
          seg8 <= NumE;
