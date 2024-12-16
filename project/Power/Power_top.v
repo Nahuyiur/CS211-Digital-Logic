@@ -10,12 +10,13 @@ module Power_top (
     output reg [7:0] Seg1,         // 前四个数码管
     output reg [7:0] Seg2,         // 后四个数码管
     output reg [7:0] leds,         // LED显示
-    output reg [7:0] anode         // 数码管使能信号（动态扫描）
+    output reg [7:0] anode ,       // 数码管使能信号（动态扫描）
+    output reg power_state //开关机状态
 );
 
 reg mode_entered=0;
 reg [3:0] mode_sel=4'b0001;      // 模式选择信号
-wire power_state;                // 电源模块的输出信号
+                                // 电源模块的输出信号
 reg [7:0] seg1= 8'b0;    
 reg [7:0] seg2= 8'b0;     
 reg [7:0] seg3= 8'b0;             
@@ -57,8 +58,109 @@ wire type_entered3;
 // Counter和触发器相关的信号
 reg [31:0] counter;              // 用于按钮按下的计数
 reg delay_trigger;               // 触发信号
-localparam CLK_FREQ = 50000000; // 假设时钟频率为 50MHz
+ localparam CLK_FREQ         = 100_000_000; // 假设时钟频率为 50MHz
 localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5秒延迟的计数值
+
+
+    localparam STATE_OFF           = 1'b0; 
+    localparam STATE_STANDBY      = 1'b1;  
+
+    reg current_state, next_state;
+    localparam LONG_PRESS_TIME  = 3;             
+    localparam LONG_PRESS_COUNT = CLK_FREQ * LONG_PRESS_TIME; 
+
+    reg [28:0] press_counter;      
+    reg button_prev, button_stable;  
+    wire button_pressed;            
+    wire button_released;          
+
+    
+    always @(posedge clk or posedge reset) begin
+        if (~reset) begin
+            button_prev <= 1'b0;
+            button_stable <= 1'b0;
+        end else begin
+            button_prev <= power_button;
+            button_stable <= button_prev;
+        end
+    end
+
+
+    assign button_pressed = power_button & ~button_prev;
+    assign button_released = ~power_button & button_prev;
+
+    
+    always @(posedge clk or posedge reset) begin
+        if (~reset) begin
+            press_counter <= 29'd0;
+        end else if (power_button) begin
+            if (press_counter < LONG_PRESS_COUNT) begin
+                press_counter <= press_counter + 1'b1;
+            end
+        end else begin
+            press_counter <= 29'd0;
+        end
+    end
+
+   
+    always @(*) begin
+        next_state = current_state;
+        case (current_state)
+            STATE_OFF: begin
+                if (button_pressed) begin
+                    next_state = STATE_STANDBY;
+                  
+                end
+            end
+
+            STATE_STANDBY: begin
+                if (button_pressed && press_counter < LONG_PRESS_COUNT) begin
+                    next_state = STATE_STANDBY;
+                     
+                end
+                else if (power_button && press_counter >= LONG_PRESS_COUNT) begin
+                    next_state = STATE_OFF; 
+                     
+                end
+            end
+
+            default: next_state = STATE_OFF;  // 默认进入关机状态
+        endcase
+    end
+
+    // 当前状态更新
+    always @(posedge clk or posedge reset) begin
+        if (~reset) begin
+            current_state <= STATE_OFF;  // 初始化时设置为关机状态
+        end else begin
+            current_state <= next_state; // 更新当前状态
+        end
+    end
+
+    
+    always @(*) begin
+        case (current_state)
+            STATE_OFF: begin
+                power_state = 1'b0;   
+              
+          end
+            STATE_STANDBY: begin
+                power_state = 1'b1;   
+               
+            end
+            default: begin
+                power_state = 1'b0;   
+               
+            end
+        endcase
+    end
+
+
+    
+
+
+
+
 
 // 实例化 cal_top
 cal_top cal (
@@ -146,6 +248,13 @@ end
 
 
 always @(posedge clk) begin
+  if(~power_state)begin
+    mode_sel = 4'b0000;
+  end
+end
+
+
+always @(posedge clk) begin
     if(~type_entered1&&~type_entered2&&~type_entered3) begin
     if (confirm && delay_trigger) begin
         mode_entered <= 1;            
@@ -156,15 +265,14 @@ always @(posedge clk) begin
     end
 end
 
-parameter mode1 = 4'B0001;
+parameter mode1 = 4'b0001;
 parameter mode2 = 4'b0010;
 parameter mode3 = 4'b0100;
 parameter mode4 = 4'b1000;
 
 
 always @(posedge clk) begin
-    // 切换模式
-    if (!mode_entered && delay_trigger) begin
+    if (!mode_entered && delay_trigger && mode_sel != 4'b0000) begin
         if (select) begin
             case (mode_sel)
                 mode1: mode_sel <= mode2;
