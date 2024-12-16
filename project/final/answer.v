@@ -67,7 +67,7 @@ integer i, j;
                 end
             end
         end
-always @(posedge clk) begin
+ always @(posedge clk or posedge reset) begin
     if (~reset) begin
         // 清零 player 数组
         for (i = 0; i < 4; i = i + 1) begin
