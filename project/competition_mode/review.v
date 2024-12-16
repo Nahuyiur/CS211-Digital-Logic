@@ -128,8 +128,9 @@ function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
     end
 endfunction
 
+parameter is_mode_selected=3'b100;
 always @(posedge clk) begin
-    if(mode_sel==3'b100&mode==4'b0010&enter) begin
+    if(mode_sel==is_mode_selected&mode==M2&enter) begin
     if (select_answer&delay_trigger) begin
         select_answer_entered <= ~select_answer_entered;
     end
@@ -149,7 +150,7 @@ end
 
 
 always @(posedge clk) begin
-    if(mode_sel==3'b100&enter) begin
+    if(mode_sel==is_mode_selected&enter) begin
     if(confirm&&delay_trigger) begin//注意判断条件有delay_trigger=1
         type_entered <= 1;      
     end 
@@ -159,15 +160,19 @@ always @(posedge clk) begin
     end
 end
 
-// 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001(用type做了参数化)
+parameter M1=4'b0001;
+parameter M2=4'b0010;
+parameter M3=4'b0100;
+parameter M4=4'b1000;
+// 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001
 always @(posedge clk) begin
-    if(mode_sel==3'b100&enter) begin
+    if(mode_sel==is_mode_selected&enter) begin
     if (select&delay_trigger) begin
         case (mode)
-            4'b0001: mode <= 4'b0010;
-            4'b0010: mode <= 4'b0100;
-            4'b0100: mode <= 4'b1000;
-            4'b1000: mode <= 4'b0001;
+            M1: mode <= M2;
+            M2: mode <= M3;
+            M3: mode <= M4;
+            M4: mode <= M1;
         endcase
     end
     end
@@ -183,7 +188,7 @@ parameter Step4=2'b11;
 
 reg[2:0] final=3'b000;
 always @(posedge clk) begin
-    if(type_entered&mode==4'b1000&mode_sel==3'b100&confirm&delay_trigger) begin
+    if(type_entered&mode==M4&mode_sel==is_mode_selected&confirm&delay_trigger) begin
         if(final==total_player) begin
             final<=3'b000;
         end
@@ -195,13 +200,13 @@ end
 
 always @(posedge clk) begin
     if(type_entered&enter)begin
-        if (confirm&delay_trigger&mode!=4'b1000) begin
+        if (confirm&delay_trigger&mode!=M4) begin
             case (store)
                 Step1: begin
-                    if(mode==4'b0010)begin
+                    if(mode==M2)begin
                     store <=Step3;
                 end
-                else begin if(mode==4'b1000)begin
+                else begin if(mode==M4)begin
                     store <=Step1;
                 end
                 else store <=Step2;
@@ -233,10 +238,10 @@ always @(posedge clk) begin//控制leds和seg的输出
             led1<=Blank;
             led2<=Blank;
         case (mode)//未进入模式的时候seg1亮起，显示此时的运算类型（1，2，3，4，5）
-            4'b0001: seg1 <= 8'b00111010; 
-            4'b0010: seg1 <= 8'b00111110; 
-            4'b0100: seg1 <= 8'b00011010; 
-            4'b1000: seg1 <= 8'b01111010;
+            M1: seg1 <= Num1; 
+            M2: seg1 <= Num2; 
+            M3: seg1 <= Num3; 
+            M4: seg1 <= Num4;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
         end
@@ -251,10 +256,10 @@ always @(posedge clk) begin//控制leds和seg的输出
         seg7<=Blank;
         seg8<=Blank;
         case (mode)//同时让seg1不要关闭
-            4'b0001: seg1 <= 8'b00111010; 
-            4'b0010: seg1 <= 8'b00111110; 
-            4'b0100: seg1 <= 8'b00011010; 
-            4'b1000: begin
+            M1: seg1 <= Num1; 
+            M2: seg1 <= Num2; 
+            M3: seg1 <= Num3; 
+            M4: begin
 max_score = score[0];   // 假设第一个玩家为当前最优
         candidate = 2'b00;      // 当前最优玩家编号初始化为 0
 
@@ -303,10 +308,10 @@ max_score = score[0];   // 假设第一个玩家为当前最优
         end
     Step2: begin
         case (mode)//同时让seg1不要关闭
-            4'b0001: seg1 <= 8'b00111010; 
-            4'b0010: seg1 <= 8'b00111110; 
-            4'b0100: seg1 <= 8'b00011010; 
-            4'b1000: seg1 <= 8'b01111010;
+            M1: seg1 <= Num1; 
+            M2: seg1 <= Num2; 
+            M3: seg1 <= Num3; 
+            M4: seg1 <= Num4;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
         seg2 <= 8'b11001110;//这个数码管输出是p，提示输入p
@@ -315,13 +320,13 @@ max_score = score[0];   // 假设第一个玩家为当前最优
     end
     Step3: begin
          case (mode)//同时让seg1不要关闭
-            4'b0001: seg1 <= 8'b00111010; 
-            4'b0010: seg1 <= 8'b00111110; 
-            4'b0100: seg1 <= 8'b00011010; 
-            4'b1000: seg1 <= 8'b01111010;
+            M1: seg1 <= Num1; 
+            M2: seg1 <= Num2; 
+            M3: seg1 <= Num3; 
+            M4: seg1 <= Num4;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
-        if(mode==4'b0010) begin
+        if(mode==M2) begin
             seg2<=8'b11100110;
         end
         else begin
@@ -342,7 +347,7 @@ max_score = score[0];   // 假设第一个玩家为当前最优
             end
     end
         case(mode)
-        4'b0001: begin
+        M1: begin
             seg1 <= digit_to_seg1((question)/10);
             seg2 <= digit_to_seg1((question)%10);
             seg3 <= Blank;
@@ -352,7 +357,7 @@ max_score = score[0];   // 假设第一个玩家为当前最优
             seg7 <= digit_to_seg1((score[player][9:0]/10)%10);
             seg8 <= digit_to_seg1(score[player][9:0]%10);
         end
-        4'b0010: begin
+        M2: begin
             seg1 <= digit_to_seg1((question)/10);
             seg2 <= digit_to_seg1((question)%10);
             seg3 <= Blank;
@@ -385,7 +390,7 @@ max_score = score[0];   // 假设第一个玩家为当前最优
             led2 <= q[(question-1)][7:0];
          end
         end
-        4'b0100: begin
+        M3: begin
             seg1 <= digit_to_seg1(question/10);
             seg2 <= digit_to_seg1(question%10);
             seg3 <= Blank;
@@ -488,7 +493,7 @@ task signed_operation;
             2'b01: begin
                 result = a - b;  // 减法
             end
-            default: result = 8'b00000000;  // 默认情况
+            default: result = Blank;  // 默认情况
         endcase
 
         sign = result[7];  // 获取符号位
@@ -532,7 +537,7 @@ begin
         2'b01: result = a >>> b;  // 算术右移
         2'b10: result = a << b;   // 逻辑左移
         2'b11: result = a >> b;   // 逻辑右移
-        default: result = 8'b00000000; // 默认值
+        default: result = Blank; // 默认值
     endcase
     answer1 = result;
     answer2 = 8'b0;
