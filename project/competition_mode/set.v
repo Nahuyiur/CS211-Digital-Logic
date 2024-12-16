@@ -21,6 +21,7 @@
 
 
 module set(
+    input enter,
     input wire [2:0] mode_sel,
     input clk,
     input reset,
@@ -28,6 +29,7 @@ module set(
     input select,
     input exit, 
     input [7:0] in,
+    output reg [7:0] total_player=8'b00000100,
     output reg [7:0] seg1,
     output reg [7:0] seg2,
     output reg [7:0] seg3,
@@ -38,11 +40,10 @@ module set(
     output reg [7:0] seg8,
     output reg [5:0] total=6'b000000,
     output reg mode_entered,
-    output reg [7:0] total_player,
     output reg [1049:0] mode_question_flat // 用于输出展平后的数组
 );
+parameter is_enter=4'b0100;
 reg [20:0] mode_question [49:0];
-
 integer i;
 
 // 在 `always` 块中将二维数组展平为一维数组：
@@ -67,7 +68,7 @@ reg [3:0] op = 4'b0001;
 reg [2:0] store = 3'b0; 
 reg [2:0] current_digit = 0; 
 reg [20:0] counter1 = 0; 
-reg [4:0] mode = 5'b00001; //11111
+reg [4:0] mode = 5'b00001; 
 
 
 
@@ -106,7 +107,7 @@ end
 //该模块用于进入和退出模式，点击confirm进入模式，mode_entered=1说明进入模式
 //请把mode_entered的两个值参数化
 always @(posedge clk) begin
-    if(mode_sel==3'b001) begin
+    if(mode_sel==3'b001&enter) begin
     if(confirm&&delay_trigger) begin//注意判断条件有delay_trigger=1
         mode_entered <= 1;            
     end 
@@ -121,7 +122,7 @@ end
 //请把mode的五个值参数化
 
 always @(posedge clk) begin
-    if(mode_sel==3'b001) begin
+    if(mode_sel==3'b001&enter) begin
     if(~mode_entered&&delay_trigger) begin
     if (select) begin
         case (mode)
@@ -140,7 +141,7 @@ end
 // 该模块用于每个运算类型的操作符切换，点击select按钮切换操作符op，切换顺序为：0001，0010，0100，1000，0001，
 //请把op的四个值参数化
 always @(posedge clk) begin
-    if(mode_sel==3'b001) begin
+    if(mode_sel==3'b001&enter) begin
     if(mode_entered&&delay_trigger)begin
     if (select) begin
         case (op)
@@ -171,7 +172,7 @@ end
 //000清零之前的运算，001提示输入a并时刻显示和存储a,010提示输入b并时刻显示和存储b
 //请把store的四个值参数化
 always @(posedge clk) begin
-    if(mode_sel==3'b001) begin
+    if(mode_sel==3'b001&enter) begin
     if(mode_entered&&delay_trigger)begin
     if (confirm) begin
         case (store)
@@ -179,7 +180,7 @@ always @(posedge clk) begin
             store <=3'b001;
         end   
             3'b001: begin
-                if(mode==5'b00001 || mode==5'b11111 )begin
+                if(mode==5'b00001|mode==5'b11111)begin
                 store <=3'b000;
 
             end
@@ -196,7 +197,7 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk) begin
-    if(mode_sel==3'b001) begin
+    if(mode_sel==3'b001&enter) begin
      case(mode_entered)
         0: begin
             seg2<=8'b0;
@@ -230,7 +231,15 @@ always @(posedge clk) begin
         seg7<=8'b0;
         seg8<=8'b0;
        
-        case (mode)//同时让seg1不要关闭
+      
+        case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
+                4'b0001: seg2 <= 8'b0110_0000; 
+                4'b0010: seg2 <= 8'b1101_1010; 
+                4'b0100: seg2 <= 8'b1111_0010; 
+                4'b1000: seg2 <= 8'b0110_0110; 
+                default: seg2 <= 8'b0000_0000; 
+            endcase
+         case (mode)//同时让seg1不要关闭
                 5'b00001: begin
                     case (op)//进入模式的时候seg2亮起，显示此时的运算符（1，2，3，4)
                 4'b0001: seg2 <= 8'b0110_0000; 
@@ -297,17 +306,15 @@ always @(posedge clk) begin
         seg4 <=8'b0;
       
     end
-    
-    3'b001: begin   
-        if(mode == 5'b11111 )begin
-            seg3 <= digit_to_seg2(total_player) ;
+    3'b001: begin
+if(mode == 5'b11111 )begin
+            seg3 <= digit_to_seg1(total_player) ;
         end
-       
-       else begin
-            seg3 <= 8'b00111010;//这个数码管输出是a，提示输入a
-            seg4 <= 8'b0;//b此时不出现
-       if(confirm&&delay_trigger) begin
-       case (mode)
+        else begin
+        seg3 <= 8'b00111010;//这个数码管输出是a，提示输入a
+        seg4 <= 8'b0;//b此时不出现
+        if(confirm&&delay_trigger) begin
+        case (mode)
                 5'b00001:begin
             case (op)
                 4'b0001: begin
@@ -324,7 +331,7 @@ always @(posedge clk) begin
                 end
                 default: seg2 <= 8'b0000_0000; 
             endcase
-                seg1 <= 8'b0110_0000;
+                seg1 <= 8'b0110_0000; 
                  mode_question[total][20:18] <= 3'b001;
                  mode_question[total][15:8]  <= in;
                  mode_question[total][7:0]  <= 8'b00000000;
@@ -347,8 +354,6 @@ always @(posedge clk) begin
                  seg1 <= 8'b1101_1010; 
                  mode_question[total][20:18] <= 3'b010;
                  mode_question[total][15:8]  <= in;
-                
-
             end
 
             5'b00100:begin
@@ -433,13 +438,13 @@ always @(posedge clk) begin
             end
         endcase
 end
-       end
+    end
     end
     3'b010: begin
 
         seg3 <= 8'b00111010;
         seg4 <= 8'b00111110;
-    if(confirm&&delay_trigger) begin
+if(confirm&&delay_trigger) begin
          case (mode)
                 5'b00010:begin
             case (op)
@@ -473,7 +478,7 @@ end
             end
                 default: seg2 <= 8'b0000_0000; 
             endcase
-                 seg1 <= 8'b1111_0010; 
+                seg1 <= 8'b1111_0010; 
                  mode_question[total][7:0]  <= in;
                  total <= total + 1'b1;
             end
@@ -573,20 +578,6 @@ function [7:0] digit_to_seg1;
             4'd14: digit_to_seg1 = NumE; // 显示 "E"
             4'd15: digit_to_seg1 = NumF; // 显示 "F"
             default: digit_to_seg1 = 8'b11111111; // 空白
-        endcase
-    end
-endfunction
-function [7:0] digit_to_seg2;
-    input [7:0] digit;  // 输入 4 位数字（支持 0-9 和 A-F）
-    begin
-        case (digit)
-            8'd0: digit_to_seg2 = Num0; // 显示 "0"
-            8'd1: digit_to_seg2 = Num1; // 显示 "1"
-            8'd2: digit_to_seg2 = Num2; // 显示 "2"
-            8'd3: digit_to_seg2 = Num3; // 显示 "3"
-            8'd4: digit_to_seg2 = Num4; // 显示 "4"
-            
-            default: digit_to_seg2 = 8'b11111111; // 空白
         endcase
     end
 endfunction

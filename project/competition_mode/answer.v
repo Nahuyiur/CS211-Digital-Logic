@@ -21,7 +21,9 @@
 
  
 module answer (
-    input wire [5:0] total,    //赛题总数
+    input [7:0] total_player,
+    input enter,
+    input wire [5:0] total, 
     input wire [2:0] mode,
     input clk,
     input reset,
@@ -31,7 +33,6 @@ module answer (
     input change,
     input [7:0] in,
     input [1049:0] mode_question_flat,
-    input [7:0] total_player,
     output reg [7:0] seg1,
     output reg [7:0] seg2,
     output reg [7:0] seg3,
@@ -46,7 +47,7 @@ module answer (
     output reg[5999:0] player_flat
     );
     reg [20:0] question [49:0];
-
+    parameter is_enter = 4'b0100;
 integer k;
 // 在 `always` 块中将二维数组展平为一维数组：
 always @(posedge clk) begin
@@ -71,7 +72,6 @@ integer i, j;
 reg finish=0;
 reg [4:0] total_time = 5'b11000;
 reg [4:0] current_time = 5'b11000;
-   //选手总数
 reg [5:0] current = 6'b000000;    //当前赛题
 reg [1:0] current_player = 2'b00;//当前选手
 
@@ -119,6 +119,7 @@ function [7:0] digit_to_seg1;
         endcase
     end
 endfunction
+
 reg [24:0] counter = 0; // 计数器
 reg delay_trigger = 0;  // 触发信号
 localparam CLK_FREQ = 50000000; // 假设时钟频率为 50MHz
@@ -162,8 +163,8 @@ always @(posedge clk) begin
 end
 
 always @(posedge clk ) begin
-    if(mode==3'b010) begin
-            if(current_player==total_player&current==total-1&submit&delay_trigger) begin
+    if(mode==3'b010&enter) begin
+            if(current_player==total_player-1&current==total-1&submit&delay_trigger) begin
               mode_entered <=0;
             end
             if(confirm&delay_trigger) begin
@@ -172,7 +173,7 @@ always @(posedge clk ) begin
     end
 end
 always @(posedge clk ) begin
-    if(mode==3'b010) begin
+    if(mode==3'b010&enter) begin
             if((confirm&delay_trigger&mode_entered)|current_time==5'b0) begin
               finish <=1;
             end
@@ -185,7 +186,10 @@ always @(posedge clk ) begin
 end
 reg [1:0] input_counter = 2'b00;
 always @(posedge clk ) begin
-    if(mode==3'b010) begin
+    if(mode==3'b010&enter) begin
+        if(confirm&delay_trigger) begin
+            input_counter <= 2'b00;
+        end
         case (question[current][20:18]) //五种运算类型分别操作
            3'b001: begin
             case(input_counter)
@@ -261,7 +265,7 @@ always @(posedge clk ) begin
 end
 
 always @(posedge clk) begin
-    if(mode==3'b010) begin
+    if(mode==3'b010&enter) begin
     if(finish&submit&delay_trigger) begin
         if(current<total-1) begin
         current<=current+1;
@@ -274,9 +278,9 @@ end
 end
 
 always @(posedge clk) begin
-    if(mode==3'b010) begin
+    if(mode==3'b010&enter) begin
     if(current==total-1&submit&delay_trigger&finish&mode_entered) begin
-        if(current_player<total_player) begin
+        if(current_player<total_player-1) begin
         current_player<=current_player+1;
         end
         else begin
@@ -287,7 +291,7 @@ end
 end
 
 always @(posedge clk) begin
-    if(mode==3'b010&delay_trigger2&mode_entered) begin
+    if(mode==3'b010&enter&delay_trigger2&mode_entered) begin
     case(finish)
     0: begin
         if(current_time>5'b0) begin
@@ -305,7 +309,7 @@ endcase
 end
 
   always @(posedge clk) begin
-    if(mode==3'b010) begin
+    if(mode==3'b010&enter) begin
     if(mode_entered) begin
     if(current_time>5'b10100&~finish) begin
         if(current_time==5'b11000) begin

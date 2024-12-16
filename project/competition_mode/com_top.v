@@ -1,34 +1,31 @@
 module competition_top (
+    input [3:0] enter,
     input wire clk,                 // 时钟信号
     input wire reset,               // 复位信号
-    input wire power_button,        // 电源按钮
     input confirm,                  // 进入退出模式的按钮
     input select,                   // 切换模式的按钮      
     input change,
     input exit,
     input [7:0] in,                // 拨码开关的输入   
-    output reg [7:0] Seg1,         // 前四个数码管
-    output reg [7:0] Seg2,         // 后四个数码管
+    output reg [7:0] seg1,   
+    output reg [7:0] seg2,     
+    output reg [7:0] seg3,             
+    output reg [7:0] seg4,
+    output reg [7:0] seg5, 
+    output reg [7:0] seg6,     
+    output reg [7:0] seg7,             
+    output reg [7:0] seg8,
     output reg [7:0] led1,         // LED显示
     output reg [7:0] led2,
-    output reg [7:0] anode         // 数码管使能信号（动态扫描）
+    output reg [7:0] anode,         // 数码管使能信号（动态扫描）
+    output reg mode_entered
 );
-reg mode_entered;
 wire [7:0] total_player;
 wire [1049:0] mode_question_flat;
 wire [5999:0] player_flat;
-wire [63:0] score_flat;
 wire [5:0] total_question;
 reg [2:0] mode_sel=3'b001;              // 模式选择信号
-wire power_state;                // 电源模块的输出信号
-reg [7:0] seg1= 8'b0;    
-reg [7:0] seg2= 8'b0;     
-reg [7:0] seg3= 8'b0;             
-reg [7:0] seg4= 8'b0;
-reg [7:0] seg5= 8'b0; 
-reg [7:0] seg6= 8'b0;     
-reg [7:0] seg7= 8'b0;             
-reg [7:0] seg8= 8'b0;
+reg mode_entered2=0;
 wire [7:0] seg11;    
 wire [7:0] seg12;     
 wire [7:0] seg13;             
@@ -69,6 +66,7 @@ localparam DELAY_COUNT = CLK_FREQ / 2; // 0.5秒延迟的计数值
 // 实例化 cal_top
 
 set set (
+    .enter(mode_entered2),
     .mode_sel(mode_sel),
     .clk(clk),                // 时钟信号
     .reset(reset),            // 复位信号
@@ -92,6 +90,7 @@ set set (
 
 answer answer (
     .total_player(total_player),
+    .enter(mode_entered2),
     .total(total_question),
     .mode_question_flat(mode_question_flat),
     .mode(mode_sel),
@@ -118,6 +117,8 @@ answer answer (
 
 review review (
     .select_answer(change),
+    .total_player(total_player),
+    .enter(mode_entered2),
     .mode_question_flat(mode_question_flat),
     .player_flat(player_flat),
     .mode_sel(mode_sel),
@@ -163,15 +164,30 @@ always @(posedge clk) begin
     end
 end
 
-
+parameter is_enter=4'b0100;
 always @(posedge clk) begin
+    if(enter==is_enter) begin
     if(~type_entered1&&~type_entered2&&~type_entered3) begin
     if (confirm && delay_trigger) begin
         mode_entered <= 1;            
     end 
-    if (exit && delay_trigger) begin
+    if (exit &~mode_entered2& delay_trigger) begin
         mode_entered <= 0;       
     end 
+    end
+    end
+end
+
+always @(posedge clk) begin
+    if(enter==is_enter) begin
+    if(~type_entered1&~type_entered2&~type_entered3&mode_entered) begin
+    if (confirm && delay_trigger) begin
+        mode_entered2 <= 1;            
+    end 
+    if (exit && delay_trigger) begin
+        mode_entered2 <= 0;       
+    end 
+    end
     end
 end
 
@@ -182,7 +198,8 @@ parameter mode3 = 3'b100;
 
 always @(posedge clk) begin
     // 切换模式
-    if (~mode_entered && delay_trigger) begin
+    if(enter==is_enter) begin
+    if (~mode_entered2 && delay_trigger) begin
         if (select) begin
             case (mode_sel)
                 mode1: mode_sel <= mode2;
@@ -190,6 +207,7 @@ always @(posedge clk) begin
                 mode3: mode_sel <= mode1;
             endcase
         end
+    end
     end
 end
 
@@ -199,9 +217,6 @@ parameter Num1 = 8'b0110_0000; // "1"
 parameter Num2 = 8'b1101_1010; // "2"
 parameter Num3 = 8'b1111_0010; // "3"
 parameter Num4 = 8'b0110_0110; // "4"
-
-
-
 parameter Num5 = 8'b1011_0110; // "5"
 parameter Num6 = 8'b1011_1110; // "6"
 parameter Num7 = 8'b1110_0000; // "7"
@@ -242,9 +257,8 @@ function [7:0] digit_to_seg1;
     end
 endfunction
 always @(posedge clk) begin
-
-    
-    if(mode_entered) begin
+    if(enter==is_enter) begin
+    if(mode_entered2) begin
     case (mode_sel)
         mode1: begin
             seg1 <= seg11;  
@@ -270,7 +284,6 @@ always @(posedge clk) begin
             led2 <= led22;
         end
         mode3: begin
-    
             seg1 <= seg31;  
             seg2 <= seg32;  
             seg3 <= seg33; 
@@ -304,39 +317,6 @@ always @(posedge clk) begin
         end
     endcase
     end
-    display_scan(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,anode,Seg1,Seg2);
+    end
 end
-
-task display_scan;
-input [7:0] data1;
-    input [7:0] data2;
-    input [7:0] data3;
-    input [7:0] data4;
-    input [7:0] data5;
-    input [7:0] data6;
-    input [7:0] data7;
-    input [7:0] data8;
-    output reg [7:0] anode;      // 数码管使能信号（动态扫描）
-    output reg [7:0] s1;
-    output reg [7:0] s2;    
-        begin
-            anode = 8'b00000000;             
-            anode[current_digit] = 1;       
-            
-            case (current_digit)
-                3'd0: s1 = data1;
-                3'd1: s1 = data2; 
-                3'd2: s1 = data3; 
-                3'd3: s1 = data4; 
-                3'd4: s2 = data5; 
-                3'd5: s2 = data6; 
-                3'd6: s2 = data7; 
-                3'd7: s2 = data8;
-                default: begin
-                    s1 = 8'b1111_1111;      // 默认不显示内容
-                    s2 = 8'b1111_1111;
-                end // 默认不显示任何内容
-            endcase
-        end
-    endtask
 endmodule

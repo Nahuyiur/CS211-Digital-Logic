@@ -1,4 +1,7 @@
+`timescale 1ns / 1ps
+
 module review(
+    input enter,
     input wire [1049:0] mode_question_flat,
     input wire [5999:0] player_flat,
     input wire [2:0] mode_sel,
@@ -8,7 +11,7 @@ module review(
     input exit,               // 退出按钮
     input select,             // 切换按钮   
     input [7:0] in,           // 拨码开关的输入   
-    input total_player,
+    input [7:0] total_player,
     input select_answer,
     output reg type_entered,
     output reg[7:0] seg1,      
@@ -22,8 +25,8 @@ module review(
     output reg [7:0] led1,   // LED显示
     output reg [7:0] led2
 );
-
-
+parameter is_enter=4'b0100;
+reg select_answer_entered = 1'b0;
 reg[29:0] p [3:0][49:0];
 reg [20:0] q [49:0];
 reg [15:0] score [3:0];
@@ -43,14 +46,10 @@ integer i, j;
         end
     end
 
-
-
-    
-reg [2:0] mode = 3'b001;        // 模式选择的储存
+reg [3:0] mode = 4'b0001;        // 模式选择的储存
 reg [1:0] store = 2'b00;           // 存储状态,00为未操作，01为存储a,10为存储b,11为输出结果
 reg [1:0] player = 2'b0;               // 运算数 a
 reg [5:0] question = 6'b0;               // 运算数 b
-reg select_answer_entered = 1'b0;
 
 //下面两行的计数器用来控制按下按钮的时间
 localparam CLK_FREQ = 50000000; // 假设时钟频率为 50MHz
@@ -108,6 +107,7 @@ function [7:0] digit_to_seg1;
         endcase
     end
 endfunction
+
 //这个function和上一个function的区别是没有10-15，不会出现十六进制的转换（比如10不会被转成A）
 function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
     input [3:0] digit;        // 输入 4 位数字（支持 0-9 和 A-F）
@@ -128,7 +128,13 @@ function [7:0] digit_to_seg2;  // 输出 8 位（包括 dp）
     end
 endfunction
 
-
+always @(posedge clk) begin
+    if(mode_sel==3'b100&mode==4'b0010&enter) begin
+    if (select_answer&delay_trigger) begin
+        select_answer_entered <= ~select_answer_entered;
+    end
+    end
+end
 always @(posedge clk) begin//该模块用于设定按下按钮的时间,只有delay_trigger变成1的时候相关always才会修改寄存器的值
     if (counter < DELAY_COUNT - 1) begin
         counter <= counter + 1;
@@ -143,7 +149,7 @@ end
 
 
 always @(posedge clk) begin
-    if(mode_sel==3'b100) begin
+    if(mode_sel==3'b100&enter) begin
     if(confirm&&delay_trigger) begin//注意判断条件有delay_trigger=1
         type_entered <= 1;      
     end 
@@ -155,21 +161,14 @@ end
 
 // 该模块用于运算类型切换，点击select按钮切换模式mode，切换顺序为：00001，00010，00100，01000，10000，00001(用type做了参数化)
 always @(posedge clk) begin
-    if(mode_sel==3'b100) begin
+    if(mode_sel==3'b100&enter) begin
     if (select&delay_trigger) begin
         case (mode)
-            3'b001: mode <= 3'b010;
-            3'b010: mode <= 3'b100;
-            3'b100: mode <= 3'b001;
+            4'b0001: mode <= 4'b0010;
+            4'b0010: mode <= 4'b0100;
+            4'b0100: mode <= 4'b1000;
+            4'b1000: mode <= 4'b0001;
         endcase
-    end
-    end
-end
-
-always @(posedge clk) begin
-    if(mode_sel==3'b100) begin
-    if (select_answer&delay_trigger) begin
-        select_answer_entered <= ~select_answer_entered;
     end
     end
 end
@@ -182,15 +181,31 @@ parameter Step2=2'b01;
 parameter Step3=2'b10;
 parameter Step4=2'b11;
 
+reg[2:0] final=3'b000;
 always @(posedge clk) begin
-    if(type_entered)begin
-        if (confirm&&delay_trigger) begin
+    if(type_entered&mode==4'b1000&mode_sel==3'b100&confirm&delay_trigger) begin
+        if(final==total_player) begin
+            final<=3'b000;
+        end
+        else begin
+            final<=final+1;
+        end
+    end
+end
+
+always @(posedge clk) begin
+    if(type_entered&enter)begin
+        if (confirm&delay_trigger&mode!=4'b1000) begin
             case (store)
                 Step1: begin
-                    if(mode==3'b010)begin
+                    if(mode==4'b0010)begin
                     store <=Step3;
                 end
+                else begin if(mode==4'b1000)begin
+                    store <=Step1;
+                end
                 else store <=Step2;
+                end
                 end
                 Step2: begin
                     store <=Step3;
@@ -202,7 +217,9 @@ always @(posedge clk) begin
     end
 end
 
-
+reg [1:0] winner;    // 输出胜者的玩家编号 (0-3)
+reg [15:0] max_score;       // 当前最优的玩家成绩
+reg [1:0] candidate;        // 当前最优玩家编号
 always @(posedge clk) begin//控制leds和seg的输出
         case(type_entered)
         0: begin
@@ -216,13 +233,14 @@ always @(posedge clk) begin//控制leds和seg的输出
             led1<=Blank;
             led2<=Blank;
         case (mode)//未进入模式的时候seg1亮起，显示此时的运算类型（1，2，3，4，5）
-                3'b001: seg1 <= Num1; 
-                3'b010: seg1 <= Num2; 
-                3'b100: seg1 <= Num3; 
+            4'b0001: seg1 <= 8'b00111010; 
+            4'b0010: seg1 <= 8'b00111110; 
+            4'b0100: seg1 <= 8'b00011010; 
+            4'b1000: seg1 <= 8'b01111010;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
         end
-        1: begin         
+        1: begin    
     case(store)
     Step1: begin
         seg2<=Blank;
@@ -233,19 +251,62 @@ always @(posedge clk) begin//控制leds和seg的输出
         seg7<=Blank;
         seg8<=Blank;
         case (mode)//同时让seg1不要关闭
-               3'b001: seg1 <= 8'b00111010; 
-                3'b010: seg1 <= 8'b00111110; 
-                3'b100: seg1 <= 8'b00011010; 
-                default: seg1 <= Blank; // 默认值以防未定义操作
+            4'b0001: seg1 <= 8'b00111010; 
+            4'b0010: seg1 <= 8'b00111110; 
+            4'b0100: seg1 <= 8'b00011010; 
+            4'b1000: begin
+max_score = score[0];   // 假设第一个玩家为当前最优
+        candidate = 2'b00;      // 当前最优玩家编号初始化为 0
+
+        // 遍历 4 个玩家进行比较
+        for (i = 1; i < 4; i = i + 1) begin
+            // 比较正确题目数
+            if (score[i][15:10] > max_score[15:10]) begin
+                max_score = score[i];
+                candidate = i;
+            end
+            // 如果正确题目数相同，比较答题时间
+            else if (score[i][15:10] == max_score[15:10]) begin
+                // 比较总答题时间，答题时间少的获胜
+                if (score[i][9:0] < max_score[9:0]) begin
+                    max_score = score[i];
+                    candidate = i;
+                end
+            end
+        end
+        winner = candidate;  // 最终获胜者
+            if(final==total_player) begin
+                seg1 <= digit_to_seg1(winner);
+                seg2 <= Blank;
+                seg3 <= Blank;
+                seg4 <= Blank;
+                seg5 <= Blank;
+                seg6 <= Blank;
+                seg7 <= Blank;
+                seg8 <= Blank;
+            end
+            else begin
+                seg1 <= digit_to_seg1(final);
+                seg2 <= Blank;
+                seg3 <= digit_to_seg1(score[final][15:10]/10);
+                seg4 <= digit_to_seg1(score[final][15:10]%10);
+                seg5 <=Blank;
+                seg6 <= digit_to_seg1(score[final][9:0]/100);
+                seg7 <= digit_to_seg1((score[final][9:0]/10)%10);
+                seg8 <= digit_to_seg1(score[final][9:0]%10);
+            end
+            end
+            default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
         led1 <= Blank;
         led2 <= Blank;
-    end
+        end
     Step2: begin
         case (mode)//同时让seg1不要关闭
-               3'b001: seg1 <= 8'b00111010; 
-                3'b010: seg1 <= 8'b00111110; 
-                3'b100: seg1 <= 8'b00011010; 
+            4'b0001: seg1 <= 8'b00111010; 
+            4'b0010: seg1 <= 8'b00111110; 
+            4'b0100: seg1 <= 8'b00011010; 
+            4'b1000: seg1 <= 8'b01111010;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
         seg2 <= 8'b11001110;//这个数码管输出是p，提示输入p
@@ -254,12 +315,13 @@ always @(posedge clk) begin//控制leds和seg的输出
     end
     Step3: begin
          case (mode)//同时让seg1不要关闭
-              3'b001: seg1 <= 8'b00111010; 
-                3'b010: seg1 <= 8'b00111110; 
-                3'b100: seg1 <= 8'b00011010; 
+            4'b0001: seg1 <= 8'b00111010; 
+            4'b0010: seg1 <= 8'b00111110; 
+            4'b0100: seg1 <= 8'b00011010; 
+            4'b1000: seg1 <= 8'b01111010;
                 default: seg1 <= Blank; // 默认值以防未定义操作
         endcase
-        if(mode==3'b010) begin
+        if(mode==4'b0010) begin
             seg2<=8'b11100110;
         end
         else begin
@@ -280,26 +342,25 @@ always @(posedge clk) begin//控制leds和seg的输出
             end
     end
         case(mode)
-        3'b001: begin
-            seg1 <= digit_to_seg1(player);
-            seg2 <= digit_to_seg1((question)/10);
-            seg3 <= digit_to_seg1((question)%10);
+        4'b0001: begin
+            seg1 <= digit_to_seg1((question)/10);
+            seg2 <= digit_to_seg1((question)%10);
+            seg3 <= Blank;
             seg4 <= digit_to_seg1(p[player][question-1][29:25]/10); 
             seg5 <= digit_to_seg1(p[player][question-1][29:25]%10); 
             seg6 <= digit_to_seg1(score[player][9:0]/100);
             seg7 <= digit_to_seg1((score[player][9:0]/10)%10);
             seg8 <= digit_to_seg1(score[player][9:0]%10);
         end
-        3'b010: begin
+        4'b0010: begin
             seg1 <= digit_to_seg1((question)/10);
             seg2 <= digit_to_seg1((question)%10);
             seg3 <= Blank;
             seg4 <= digit_to_seg1(q[question-1][20:18]); 
-            seg5 <= digit_to_seg1(q[question-1][17:16]+1); 
-            seg6 <= Blank;
+            seg5 <= Blank;
+            seg6 <= digit_to_seg1(q[question-1][17:16]+1); 
             seg7 <= Blank;
             seg8 <= Blank;
-
             if(select_answer_entered)begin//查看正确答案
                  case(q[question-1][20:18])
                 3'b001:begin
@@ -324,28 +385,25 @@ always @(posedge clk) begin//控制leds和seg的输出
             led2 <= q[(question-1)][7:0];
          end
         end
-        3'b100: begin
-            seg1 <= digit_to_seg1(player);
-            seg2 <= digit_to_seg1(question/10);
-            seg3 <= digit_to_seg1(question%10);
-            seg4 <= Blank;
-            seg5 <= digit_to_seg1(p[player][question-1][0]); 
+        4'b0100: begin
+            seg1 <= digit_to_seg1(question/10);
+            seg2 <= digit_to_seg1(question%10);
+            seg3 <= Blank;
+            seg4 <= digit_to_seg1(p[player][question-1][0]); 
+            seg5 <= Blank;
             seg6 <= Blank;
-            seg7 <= digit_to_seg1(score[player][15:10]/10);
-            seg8 <= digit_to_seg1(score[player][15:10]%10);
+            seg7 <= Blank;
+            seg8 <= Blank;
             led1 <= p[player][question-1][24:17];
-            led2 <= p[player][question-1][16:9];
+            led2[7:4] <= p[player][question-1][12:9];
+            led2[3:0] <= p[player][question-1][4:1];
         end
     endcase
-        end
-    endcase
-        end
+    end
     endcase
 end
-
-
-
-
+        endcase
+end
 
 task convert_binary;
         input [1:0] op;
@@ -527,7 +585,5 @@ task logic_operation;
       answer2= 8'b0;
     end
 endtask
-
-
 
 endmodule
