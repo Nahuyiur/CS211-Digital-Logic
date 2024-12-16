@@ -8,7 +8,8 @@ module study_top(
     input exit,               // 退出按钮
     input select,             // 切换按钮   
     input data,
-    input [7:0] in,  
+    input [7:0] in,
+    output reg [2:0] correct,  
     output reg mode_entered,
     output reg[7:0] seg1,      
     output reg[7:0] seg2,   
@@ -25,7 +26,7 @@ module study_top(
    reg[4:0] data_mode_state  = 5'b00001;//这个用于学情显示下的模式，并不代表真正的模式
   
    reg [7:0] user_input_mode1 [7:0]; //存储模式1下用户输入的八个数据
-   reg [7:0] user_input_mode2 [3:0]; //存储模式2下用户输入的四个数据
+   reg [7:0] user_input_mode2 [3:0] ; //存储模式2下用户输入的四个数据
    reg [7:0] user_input_mode3 = 8'b0; 
    reg [7:0] user_input_mode4 = 8'b0;
    reg [7:0] user_input_mode5 = 8'b0;   
@@ -336,7 +337,6 @@ always @(posedge clk) begin
            if (counter_b < 3) begin  
                 user_input_mode1[counter_b] <= in; 
                 counter_b <= counter_b + 1;
-
                       
             end 
             else  begin
@@ -437,7 +437,7 @@ end
     DM3:begin
     if(mode3_amount == mode3_correct_amount && mode3_amount != 0)begin
         seg1 <= Num3; // 显示 "3"
-        seg2 <= Blank;         //不显示
+        seg2 <= Blank;//不显示
         seg3 <= digit_to_seg2(mode3_amount /10);      //题目数量的十位
         seg4 <= digit_to_seg2(mode3_amount % 10);     //题目数量的个位
         seg5 <= Blank;         //不显示
@@ -510,7 +510,8 @@ end
         end   
 end
 endcase
-  end  
+  end 
+
   else begin
         case(mode_entered)
         0: begin
@@ -608,7 +609,7 @@ endcase
             M1: begin
             convert_binary_answer(a);//存储正确答案
             seg3 <= Numr;//显示r，提示输入用户结果(按顺序)
-
+            seg7 <= digit_to_seg1(counter_a);
             end
             M2: begin
                 case (op)
@@ -620,6 +621,7 @@ endcase
             endcase
             signed_operation_answer(a,b,op);
             seg5 <= Numr;//显示r，提示输入用户结果(按顺序)
+            seg7 <= digit_to_seg1(counter_b);
             end
             M3: begin
                 case (op)
@@ -659,15 +661,18 @@ endcase
         end
      Step5:
      if(confirm&&delay_trigger) begin
+        seg7 <= Blank;
       case (mode)
         M1:begin
          if (user_input_mode1[0] == mode1_answer[0] &&user_input_mode1[1] == mode1_answer[1] && user_input_mode1[2] == mode1_answer[2] && user_input_mode1[3] == mode1_answer[3] && user_input_mode1[4] == mode1_answer[4] && user_input_mode1[5] == mode1_answer[5] && user_input_mode1[6] == mode1_answer[6] && user_input_mode1[7] == mode1_answer[7] ) begin
              answer_result <= 1'b1;
+             correct <=2'b01;
             mode1_amount <= mode1_amount + 1;
             mode1_correct_amount   <= mode1_correct_amount + 1;
           end
          else begin
           answer_result <= 1'b0;
+          correct <=2'b10;
           mode1_amount <= mode1_amount + 1;
            end
 end     
@@ -675,15 +680,15 @@ end
             
         if (user_input_mode2[0]== mode2_answer[0] &&user_input_mode2[1]== mode2_answer[1] && user_input_mode2[2]== mode2_answer[2] && user_input_mode2[3]== mode2_answer[3] ) begin
             answer_result <= 1'b0;
+            correct <=2'b10;
             mode2_amount <= mode2_amount + 1;
             mode2_correct_amount   <= mode2_correct_amount + 1;
         end
            else begin
+            correct <=2'b01;
                 answer_result <= 1'b1;
                 mode2_amount <= mode2_amount + 1;
            end
-     
-        
         end  
 
         M3:begin
@@ -691,10 +696,11 @@ end
             if(user_input_mode3 != mode3_answer )begin
                 answer_result <= 1'b0;
                 mode3_amount <= mode3_amount + 1;
-               
+               correct <=2'b01;
             end
             else begin
             answer_result <= 1'b1;
+            correct <=2'b10;
             mode3_amount <= mode3_amount + 1;
             mode3_correct_amount   <= mode3_correct_amount + 1;
            end
@@ -702,10 +708,12 @@ end
          M4:begin
             if(user_input_mode4 != mode4_answer)begin
                answer_result <= 1'b0;
+               correct <=2'b01;
                mode4_amount <= mode4_amount + 1;
             end
             else 
                  begin
+                    correct <=2'b10;
                      answer_result <= 1'b1;
                       mode4_amount <= mode4_amount + 1;
                       mode4_correct_amount   <= mode4_correct_amount + 1;
@@ -714,32 +722,29 @@ end
          M5:begin
             if(user_input_mode4 != mode4_answer)begin
                 answer_result <= 1'b0;
+                correct <=2'b01;
                 mode5_amount <= mode5_amount + 1;
             end
             else 
                  begin
+                correct <=2'b10;
                 answer_result <= 1'b1;
                 mode5_amount <= mode5_amount + 1;
-               mode5_correct_amount   <= mode5_correct_amount + 1;
+               mode5_correct_amount <= mode5_correct_amount + 1;
             end
         end
     endcase
 end
-    Step6: 
+    Step6: begin
+          correct<=2'b00;
           case (answer_result)
         1'b0 : 
          seg8 <= NumE;
 
         1'b1:
-         seg8<= NumA;
-
-           
+         seg8<= NumA;       
         endcase  
-
-        
-    
-
-
+    end
    endcase
      end
 endcase
@@ -750,7 +755,6 @@ end
 //下面是六个task，对应五个运算类型和一个数码管显示逻辑s
 task convert_binary_answer;//存储正确答案
     input [7:0] bin_value; // 输入的二进制值
-   
     begin 
         // 八进制转换逻辑
          mode1_answer[0] = bin_value / 64;  
@@ -766,7 +770,6 @@ task convert_binary_answer;//存储正确答案
         mode1_answer[6] = bin_value[7:4];  // 十六进制高四位拼接
         mode1_answer[7]  = bin_value[3:0];  // 十六进制低四位拼接
 
-      
     end
 endtask
 
@@ -856,7 +859,6 @@ begin
         default: result = Blank; // 默认值
     endcase
      mode3_answer = result;
-
 end
 endtask
 
