@@ -147,7 +147,7 @@ Week3:
 
 ## 系统使用说明
 
-![image-20241215144853392](/Users/ruiyuhan/Library/Application Support/typora-user-images/image-20241215144853392.png)
+![system overview](system_overview.png)
 
 ## 系统结构说明
 
